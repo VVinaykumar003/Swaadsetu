@@ -1,0 +1,480 @@
+{
+  "info": {
+    "_postman_id": "swadsetu-updated",
+    "name": "Swad Setu API - Corrected Admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.2"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000" },
+    { "key": "restaurant_id", "value": "restro" },
+    { "key": "token", "value": "" },
+    { "key": "sessionId", "value": "s1" }
+  ],
+  "item": [
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin Login (PIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"pin\": \"1111\" }" },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "login"]
+            },
+            "description": "Login using admin PIN (returns JWT token)."
+          }
+        },
+        {
+          "name": "Get Menu (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/menu",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "menu"]
+            },
+            "description": "Public menu endpoint; no auth required."
+          }
+        },
+        {
+          "name": "Generate Override Token (PIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"pin\": \"1111\" }" },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/overrides",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "overrides"]
+            },
+            "description": "Generate a one-time override token using current PIN."
+          }
+        },
+        {
+          "name": "Update Menu",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"menu\":{\"items\":[]},\"categories\":[],\"taxes\":[],\"serviceCharge\":0,\"branding\":{}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/menu",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "menu"]
+            },
+            "description": "Update menu (requires admin privileges)."
+          }
+        },
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/analytics?period=daily",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "analytics"],
+              "query": [{ "key": "period", "value": "daily" }]
+            },
+            "description": "Get analytics for given period (daily|weekly|monthly)."
+          }
+        },
+        {
+          "name": "Export Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"format\": \"csv\", \"period\": \"monthly\" }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "export"]
+            }
+          }
+        },
+        {
+          "name": "Update Table Config (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"capacity\": 6, \"isActive\": true }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/tables/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "tables", ":id"],
+              "variable": [{ "key": "id", "value": "table_id_here" }]
+            },
+            "description": "Admin-level update to table configuration."
+          }
+        },
+        {
+          "name": "Update Admin PIN",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"currentPin\": \"1111\", \"newPin\": \"2222\" }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/pin",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "pin"]
+            },
+            "description": "Change admin PIN (must provide currentPin and newPin)."
+          }
+        },
+        {
+          "name": "Update Staff Aliases",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"staffAliases\": [\"alice\", \"bob\"] }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/admin/staff-aliases",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "admin", "staff-aliases"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tables",
+      "item": [
+        {
+          "name": "Create Table",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"tableNumber\": 1, \"capacity\": 4, \"isActive\": true }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables"]
+            }
+          }
+        },
+        {
+          "name": "Get Tables",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables"]
+            }
+          }
+        },
+        {
+          "name": "Get Table By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables", ":id"],
+              "variable": [{ "key": "id", "value": "table_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Update Table Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"isActive\": true }" },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables/:id/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables", ":id", "status"],
+              "variable": [{ "key": "id", "value": "table_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Assign Session",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"sessionId\": \"{{sessionId}}\", \"staffAlias\": \"alice\" }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables/:id/session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables", ":id", "session"],
+              "variable": [{ "key": "id", "value": "table_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Update Staff Alias For Table",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"staffAlias\": \"bob\" }" },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables/:id/staff",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables", ":id", "staff"],
+              "variable": [{ "key": "id", "value": "table_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Table",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/tables/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "tables", ":id"],
+              "variable": [{ "key": "id", "value": "table_id_here" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "order-123" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"tableId\": \"t1\", \"sessionId\": \"{{sessionId}}\", \"items\": [{ \"name\": \"Paneer\", \"price\": 200, \"quantity\": 2 }], \"isCustomerOrder\": true }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"status\": \"preparing\" }" },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/orders/:id/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "orders", ":id", "status"],
+              "variable": [{ "key": "id", "value": "order_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Get Active Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/orders/active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "orders", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Order History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/orders/history?sessionId={{sessionId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "orders", "history"],
+              "query": [{ "key": "sessionId", "value": "{{sessionId}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bills",
+      "item": [
+        {
+          "name": "Create Bill",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "bill-123" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"tableId\": \"t1\", \"sessionId\": \"{{sessionId}}\", \"items\": [{ \"name\": \"Paneer\", \"price\": 200, \"quantity\": 2 }], \"tax\": 18, \"serviceCharge\": 10 }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/bills",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "bills"]
+            }
+          }
+        },
+        {
+          "name": "Update Payment Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"paymentStatus\": \"paid\", \"staffAlias\": \"alice\", \"overrideToken\": \"\" }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/bills/:id/pay",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "bills", ":id", "pay"],
+              "variable": [{ "key": "id", "value": "bill_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Get Active Bills",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/bills/active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "bills", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Bills History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/bills/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "bills", "history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calls",
+      "item": [
+        {
+          "name": "Create Call",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"tableId\": \"t1\", \"sessionId\": \"{{sessionId}}\", \"type\": \"help\" }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/calls",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "calls"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Call",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"staffAlias\": \"alice\" }" },
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/calls/:id/resolve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "calls", ":id", "resolve"],
+              "variable": [{ "key": "id", "value": "call_id_here" }]
+            }
+          }
+        },
+        {
+          "name": "Get Active Calls",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/{{restaurant_id}}/calls/active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{restaurant_id}}", "calls", "active"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

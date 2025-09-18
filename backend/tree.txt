@@ -1,0 +1,44 @@
+2025-09-18 06:36:52.141Z   Project tree (root: D:\UTKARSH\Live Projects\Vercel-live-Website\swad-setu\backend)
+Exclude: node_modules, uploads, .git, .next; MaxDepth: 5
+
+├── common
+│   ├── libs
+│   │   ├── logger.js
+│   ├── middlewares
+│   │   ├── auth.middleware.js
+│   │   ├── rateLimit.middleware.js
+│   │   ├── validate.middleware.js
+├── config
+│   ├── index.js
+├── controllers
+│   ├── admin.controller.js
+│   ├── bill.controller.js
+│   ├── call.controller.js
+│   ├── order.controller.js
+│   ├── table.controller.js
+├── db
+│   ├── mongoose.js
+│   ├── redis.js
+├── models
+│   ├── admin.model.js
+│   ├── bill.model.js
+│   ├── call.model.js
+│   ├── order.model.js
+│   ├── table.model.js
+├── routes
+│   ├── admin.route.js
+│   ├── bill.route.js
+│   ├── call.route.js
+│   ├── order.route.js
+│   ├── table.route.js
+├── services
+│   ├── socket.service.js
+├── .env
+├── CONTEXT.md
+├── app.js
+├── package-lock.json
+├── package.json
+├── server.js
+├── tree.js
+
+Finished writing tree to tree.txt
