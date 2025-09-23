@@ -1,6 +1,5 @@
 // controllers/table.controller.js
-// Hardened version: safe when Redis helpers are missing (publishEvent no-op).
-// Preserves original behavior when publishEvent is available.
+// Hardened version with role checks and staffAlias validation.
 
 const Table = require("../models/table.model");
 
@@ -11,6 +10,22 @@ try {
 } catch (e) {
   console.warn("Logger not found, using console as fallback.");
 }
+
+// Helpers for staffAlias and role checks
+let helpers = null;
+try {
+  helpers = require("../common/libs/helpers");
+} catch (e) {
+  helpers = null;
+  logger &&
+    logger.warn &&
+    logger.warn("helpers not found; staffAlias validation may be skipped.");
+}
+const ensureStaffAliasValid = helpers
+  ? helpers.ensureStaffAliasValid
+  : async () => true;
+const requestHasRole = helpers ? helpers.requestHasRole : () => true;
+const requireRoleMiddleware = helpers ? helpers.requireRoleMiddleware : null;
 
 // Defensive load for publishEvent from Redis helpers
 let publishEvent = null;
@@ -28,7 +43,6 @@ let publishEvent = null;
       const mod = require(p);
       if (!mod) continue;
 
-      // common shapes: { publishEvent }, { publish }, or module is the function itself
       publishEvent =
         mod.publishEvent ||
         mod.publish ||
@@ -67,7 +81,7 @@ function safePublish(channel, message) {
   }
 }
 
-// Get all tables for restaurant
+// Get all tables for restaurant (public)
 async function getTables(req, res, next) {
   try {
     const { rid } = req.params;
@@ -79,14 +93,32 @@ async function getTables(req, res, next) {
     }
 
     const tables = await Table.find(filter).sort({ tableNumber: 1 });
-    res.json(tables);
+
+    // Check for expired sessions and clear if necessary
+    const now = new Date();
+    const updatedTables = tables.map((table) => {
+      if (
+        table.currentSessionId &&
+        table.sessionExpiresAt &&
+        table.sessionExpiresAt < now
+      ) {
+        return {
+          ...table.toObject(),
+          currentSessionId: null,
+          staffAlias: null,
+        };
+      }
+      return table;
+    });
+
+    return res.json(updatedTables);
   } catch (error) {
     logger && logger.error && logger.error("Tables fetch error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Get table by ID
+// Get table by ID (public)
 async function getTableById(req, res, next) {
   try {
     const { rid, id } = req.params;
@@ -96,18 +128,34 @@ async function getTableById(req, res, next) {
       return res.status(404).json({ error: "Table not found" });
     }
 
-    res.json(table);
+    // Check for expired session and clear if necessary
+    if (
+      table.currentSessionId &&
+      table.sessionExpiresAt &&
+      table.sessionExpiresAt < new Date()
+    ) {
+      table.currentSessionId = null;
+      table.staffAlias = null;
+    }
+
+    return res.json(table);
   } catch (error) {
     logger && logger.error && logger.error("Table fetch error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Update table status (activate/deactivate)
+// Update table status (activate/deactivate) - admin/staff (prefer admin)
+// Route should also protect with auth middleware; this controller additionally checks req.user role when present.
 async function updateTableStatus(req, res, next) {
   try {
     const { rid, id } = req.params;
     const { isActive } = req.body;
+
+    // Enforce role if auth populated req.user
+    if (!requestHasRole(req, ["admin", "staff"])) {
+      return res.status(403).json({ error: "Forbidden: admin/staff required" });
+    }
 
     if (typeof isActive !== "boolean") {
       return res.status(400).json({ error: "isActive must be boolean" });
@@ -132,21 +180,46 @@ async function updateTableStatus(req, res, next) {
       data: table,
     });
 
-    res.json(table);
+    return res.json(table);
   } catch (error) {
     logger && logger.error && logger.error("Table status update error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Assign session to table
+// Assign session to table - staff or admin only
 async function assignSession(req, res, next) {
   try {
     const { rid, id } = req.params;
-    const { sessionId, staffAlias } = req.body;
+    const { sessionId, staffAlias, ttlMinutes } = req.body;
+
+    // Validate and parse TTL
+    let expiryTime = null;
+    if (ttlMinutes) {
+      const ttl = parseInt(ttlMinutes, 10);
+      if (isNaN(ttl) || ttl <= 0) {
+        return res.status(400).json({ error: "Invalid TTL minutes" });
+      }
+      expiryTime = new Date(Date.now() + ttl * 60000);
+    } else {
+      // Default TTL of 30 minutes
+      expiryTime = new Date(Date.now() + 30 * 60000);
+    }
+
+    // Require staff/admin role (if auth provided)
+    if (!requestHasRole(req, ["staff", "admin"])) {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: staff/admin credentials required" });
+    }
 
     if (!sessionId) {
       return res.status(400).json({ error: "Session ID required" });
+    }
+
+    if (staffAlias) {
+      const valid = await ensureStaffAliasValid(rid, staffAlias);
+      if (!valid) return res.status(400).json({ error: "Invalid staff alias" });
     }
 
     const table = await Table.findOneAndUpdate(
@@ -154,6 +227,7 @@ async function assignSession(req, res, next) {
       {
         currentSessionId: sessionId,
         staffAlias,
+        sessionExpiresAt: expiryTime,
         lastUsed: Date.now(),
       },
       { new: true }
@@ -169,20 +243,25 @@ async function assignSession(req, res, next) {
       data: { sessionId, tableId: id },
     });
 
-    res.json(table);
+    return res.json(table);
   } catch (error) {
     logger && logger.error && logger.error("Session assignment error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Create new table
+// Create new table - admin only
 async function createTable(req, res, next) {
   try {
     const { rid } = req.params;
     const { tableNumber, capacity } = req.body;
 
-    if (!tableNumber || !capacity) {
+    // Enforce admin role if auth present
+    if (!requestHasRole(req, ["admin"])) {
+      return res.status(403).json({ error: "Forbidden: admin required" });
+    }
+
+    if (typeof tableNumber === "undefined" || typeof capacity === "undefined") {
       return res
         .status(400)
         .json({ error: "Table number and capacity required" });
@@ -203,17 +282,21 @@ async function createTable(req, res, next) {
       data: table,
     });
 
-    res.status(201).json(table);
+    return res.status(201).json(table);
   } catch (error) {
     logger && logger.error && logger.error("Table creation error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Delete table
+// Delete table - admin only
 async function deleteTable(req, res, next) {
   try {
     const { rid, id } = req.params;
+
+    if (!requestHasRole(req, ["admin"])) {
+      return res.status(403).json({ error: "Forbidden: admin required" });
+    }
 
     const table = await Table.findOneAndDelete({ _id: id, restaurantId: rid });
 
@@ -227,22 +310,29 @@ async function deleteTable(req, res, next) {
       data: { tableId: id },
     });
 
-    res.status(204).send();
+    return res.status(204).send();
   } catch (error) {
     logger && logger.error && logger.error("Table deletion error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Update staff alias for table
+// Update staff alias for table - staff/admin only (validate alias)
 async function updateStaffAlias(req, res, next) {
   try {
     const { rid, id } = req.params;
     const { staffAlias } = req.body;
 
+    if (!requestHasRole(req, ["staff", "admin"])) {
+      return res.status(403).json({ error: "Forbidden: staff/admin required" });
+    }
+
     if (!staffAlias) {
       return res.status(400).json({ error: "Staff alias required" });
     }
+
+    const valid = await ensureStaffAliasValid(rid, staffAlias);
+    if (!valid) return res.status(400).json({ error: "Invalid staffAlias" });
 
     const table = await Table.findOneAndUpdate(
       { _id: id, restaurantId: rid },
@@ -260,10 +350,10 @@ async function updateStaffAlias(req, res, next) {
       data: { tableId: id, staffAlias },
     });
 
-    res.json(table);
+    return res.json(table);
   } catch (error) {
     logger && logger.error && logger.error("Staff alias update error:", error);
-    next(error);
+    return next(error);
   }
 }
 

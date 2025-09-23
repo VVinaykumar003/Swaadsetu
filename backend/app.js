@@ -1,8 +1,7 @@
-// src/app.js
+// app.js
 const express = require("express");
-
-// initialize DB/clients (side-effects)
-require("./db/mongoose");
+const cors = require("cors");
+const helmet = require("helmet");
 
 // routes
 const orderRoutes = require("./routes/order.route");
@@ -25,52 +24,50 @@ const logger = require("./common/libs/logger");
 
 const app = express();
 
-// ------------------ Basic sanity checks ------------------
-// validateRestaurant must be a function (required)
+// ------------------ Sanity checks ------------------
 if (!validateRestaurant || typeof validateRestaurant !== "function") {
-  console.error(
+  // panic early — app should not start without this
+  throw new Error(
     "validateRestaurant middleware missing or invalid at ./common/middlewares/validate.middleware"
   );
-  process.exit(1);
 }
 
 // ------------------ Global Middlewares ------------------
-app.use(express.json());
+app.use(helmet());
+app.use(cors());
+app.use(express.json({ limit: "1mb" })); // limit payload size
+app.use(express.urlencoded({ extended: false }));
+
 if (logger && logger.middleware) {
   app.use(logger.middleware);
 }
 
-// Basic health
+// Basic health endpoint
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
-// ------------------ Optional: mount a global auth router/middleware ------------------
-// If you later re-add an auth middleware or router that should run for all /api routes,
-// require it here and mount e.g.:
-// const authRouter = require("./common/middlewares/auth.middleware");
-// if (authRouter && typeof authRouter === "function") {
-//   app.use("/api", authRouter);
-// }
-// (We're not importing auth.middleware here because we've consolidated to a single validate.middleware)
-
 // ------------------ Mount per-restaurant validators ------------------
-// This ensures req.params.rid exists for routes under /api/:rid
+// ensures req.params.rid exists for routes under /api/:rid
 app.use("/api/:rid", validateRestaurant);
 
 // ------------------ API Routes ------------------
-// Note: route files should apply route-level middlewares where needed
-// e.g., order.route.js can import handleIdempotency and validateCustomerSession or validateStaff.
-
+// route files apply their own route-level auth/validation as needed
 app.use("/api/:rid/orders", orderRoutes);
 app.use("/api/:rid/tables", tableRoutes);
 app.use("/api/:rid/bills", billRoutes);
 app.use("/api/:rid/calls", callRoutes);
 app.use("/api/:rid/admin", adminRoutes);
 
+// ------------------ 404 handler ------------------
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
 // ------------------ Error Handling ------------------
 app.use((err, req, res, next) => {
   if (logger && typeof logger.error === "function") {
     logger.error(err && err.stack ? err.stack : err);
   } else {
+    // fallback
     console.error(err);
   }
   const status = (err && err.status) || 500;

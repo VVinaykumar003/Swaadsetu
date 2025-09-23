@@ -1,6 +1,5 @@
 // controllers/admin.controller.js
-// Hardened admin controller: safer, clearer responses, non-destructive updates,
-// defensive logging/publish helpers, and more efficient analytics via aggregation.
+// Hardened admin controller with Menu extraction support and staff/login/config fixes.
 
 const Admin = require("../models/admin.model");
 const bcrypt = require("bcrypt");
@@ -8,17 +7,17 @@ const { generateToken } = require("../common/libs/jwt");
 const Order = require("../models/order.model");
 const Bill = require("../models/bill.model");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 // Defensive logger (fallback to console)
 let logger = console;
 try {
   logger = require("../common/libs/logger") || console;
 } catch (e) {
-  // fallback already assigned
   console.warn("Logger not found, using console as fallback.");
 }
 
-// Defensive load for publishEvent from Redis helpers (if available)
+// Defensive publishEvent loader
 let publishEvent = null;
 try {
   const redisModule =
@@ -26,38 +25,35 @@ try {
     require("../db/redis.helpers") ||
     require("../db/redisHelper") ||
     null;
-
   if (redisModule) {
     publishEvent =
       redisModule.publishEvent ||
       redisModule.publish ||
       (typeof redisModule === "function" ? redisModule : null);
   }
-
   if (typeof publishEvent !== "function") {
+    publishEvent = null;
     logger &&
       logger.warn &&
       logger.warn("publishEvent not available — realtime publish no-op.");
-    publishEvent = null;
   }
 } catch (e) {
+  publishEvent = null;
   logger &&
     logger.warn &&
     logger.warn("Redis publish helper load failed:", e && e.message);
-  publishEvent = null;
 }
 
 function safePublish(channel, message) {
   if (typeof publishEvent !== "function") return;
   try {
     const res = publishEvent(channel, message);
-    if (res && typeof res.then === "function") {
+    if (res && typeof res.then === "function")
       res.catch((err) => {
         logger &&
           logger.error &&
           logger.error("publishEvent promise rejected:", err);
       });
-    }
   } catch (err) {
     logger && logger.error && logger.error("publishEvent error:", err);
   }
@@ -66,8 +62,10 @@ function safePublish(channel, message) {
 function sanitizeAdmin(adminDoc) {
   if (!adminDoc) return null;
   const obj = adminDoc.toObject ? adminDoc.toObject() : { ...adminDoc };
-  // remove sensitive fields
+  // remove all sensitive fields
   delete obj.hashedPin;
+  delete obj.staffHashedPin;
+  delete obj.overrideTokens;
   return obj;
 }
 
@@ -76,12 +74,22 @@ function getBcryptRounds() {
   return Number.isFinite(env) && env > 0 ? env : 10;
 }
 
+// Defensive Menu model require (may not exist during migration)
+let Menu = null;
+try {
+  Menu = require("../models/menu.model");
+} catch (e) {
+  Menu = null;
+  logger &&
+    logger.info &&
+    logger.info("Menu model not found — menus unavailable until migrated.");
+}
+
 // ----------------------- Controllers -----------------------
 
 /**
- * Admin login
- * Body: { pin }
- * Returns: { token }
+ * Admin login (admin PIN)
+ * POST /api/:rid/admin/login
  */
 async function login(req, res, next) {
   try {
@@ -94,14 +102,11 @@ async function login(req, res, next) {
       return res.status(400).json({ error: "PIN required" });
 
     const admin = await Admin.findOne({ restaurantId: rid }).lean();
-    if (!admin) {
+    if (!admin)
       return res.status(404).json({ error: "Admin configuration not found" });
-    }
 
     const isMatch = await bcrypt.compare(pin, admin.hashedPin || "");
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid PIN" });
-    }
+    if (!isMatch) return res.status(401).json({ error: "Invalid PIN" });
 
     const token = generateToken(
       { restaurantId: rid, role: "admin" },
@@ -115,9 +120,48 @@ async function login(req, res, next) {
 }
 
 /**
- * Generate one-time override token
- * Body: { pin }
- * Returns: { token, expiresAt }
+ * Staff login (shared staff PIN or fallback to admin PIN)
+ * POST /api/:rid/auth/staff-login
+ */
+async function staffLogin(req, res, next) {
+  try {
+    const { rid } = req.params;
+    const { pin } = req.body || {};
+
+    if (!rid)
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    if (!pin || typeof pin !== "string")
+      return res.status(400).json({ error: "PIN required" });
+
+    const admin = await Admin.findOne({ restaurantId: rid }).lean();
+    if (!admin)
+      return res.status(404).json({ error: "Admin configuration not found" });
+
+    const staffHash = admin.staffHashedPin || "";
+    const adminHash = admin.hashedPin || "";
+
+    // Prefer staff pin match; allow admin pin as fallback for convenience
+    let matched = false;
+    if (staffHash) matched = await bcrypt.compare(pin, staffHash);
+    if (!matched && adminHash) matched = await bcrypt.compare(pin, adminHash);
+
+    if (!matched) return res.status(401).json({ error: "Invalid PIN" });
+
+    // Issue a short-lived staff token (no profiling in token)
+    const token = generateToken(
+      { restaurantId: rid, role: "staff" },
+      { expiresIn: "8h" }
+    );
+    return res.json({ token });
+  } catch (err) {
+    logger && logger.error && logger.error("Staff login error:", err);
+    return next(err);
+  }
+}
+
+/**
+ * Generate short-lived override token (admin PIN required)
+ * POST /api/:rid/admin/overrides
  */
 async function generateOverrideToken(req, res, next) {
   try {
@@ -136,17 +180,28 @@ async function generateOverrideToken(req, res, next) {
     const isMatch = await bcrypt.compare(pin, admin.hashedPin || "");
     if (!isMatch) return res.status(401).json({ error: "Invalid PIN" });
 
-    // generate token with expiry (e.g., 10 minutes)
     const token = crypto.randomBytes(32).toString("hex");
     const ttlMinutes =
       parseInt(process.env.OVERRIDE_TOKEN_TTL_MIN || "10", 10) || 10;
     const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
+    // Normalize overrideTokens array: keep only non-expired objects
+    admin.overrideTokens = (admin.overrideTokens || []).filter((t) => {
+      try {
+        if (!t) return false;
+        // If legacy stored as string skip it (we won't accept legacy format)
+        if (typeof t === "string") return false;
+        if (!t.expiresAt) return false;
+        return new Date(t.expiresAt) > new Date();
+      } catch (e) {
+        return false;
+      }
+    });
+
     admin.overrideTokens = admin.overrideTokens || [];
     admin.overrideTokens.push({ token, createdAt: new Date(), expiresAt });
     await admin.save();
 
-    // safe publish (optional)
     safePublish(`restaurant:${rid}:staff`, {
       event: "overrideTokenCreated",
       data: { expiresAt },
@@ -162,39 +217,39 @@ async function generateOverrideToken(req, res, next) {
 }
 
 /**
- * Get menu (public). Returns an object (never 404 if admin exists).
+ * Get Menu (public)
+ * GET /api/:rid/admin/menu
+ *
+ * NOTE: Menu is sourced from the Menu collection (single source of truth).
+ * If Menu collection/document isn't present, return 404 with guidance.
  */
-const Menu = require("../models/menu.model");
-
 async function getMenu(req, res, next) {
   try {
     const { rid } = req.params;
     if (!rid)
       return res.status(400).json({ error: "Missing restaurant id (rid)" });
 
-    // First try to get menu from new Menu collection
-    const menuDoc = await Menu.findOne({ restaurantId: rid }).lean();
-    if (menuDoc) {
-      return res.json({
-        menu: menuDoc.items,
-        categories: menuDoc.categories,
-        taxes: menuDoc.taxes,
-        serviceCharge: menuDoc.serviceCharge,
-        branding: menuDoc.branding,
-      });
+    // Try Menu collection (preferred)
+    if (Menu) {
+      const menuDoc = await Menu.findOne({
+        restaurantId: rid,
+        isActive: true,
+      }).lean();
+      if (menuDoc) {
+        return res.json({
+          menu: menuDoc.items || [],
+          categories: menuDoc.categories || [],
+          taxes: menuDoc.taxes || [],
+          serviceCharge: menuDoc.serviceCharge || 0,
+          branding: menuDoc.branding || {},
+        });
+      }
     }
 
-    // Fallback to Admin collection
-    const admin = await Admin.findOne({ restaurantId: rid }).lean();
-    if (!admin)
-      return res.status(404).json({ error: "Admin configuration not found" });
-
-    return res.json({
-      menu: admin.menu || {},
-      categories: admin.categories || [],
-      taxes: admin.taxes || null,
-      serviceCharge: admin.serviceCharge || 0,
-      branding: admin.branding || null,
+    // No menu found
+    return res.status(404).json({
+      error:
+        "Menu not configured for this restaurant. Please create an admin menu via POST /api/:rid/admin/menu",
     });
   } catch (err) {
     logger && logger.error && logger.error("Get menu error:", err);
@@ -203,9 +258,10 @@ async function getMenu(req, res, next) {
 }
 
 /**
- * Update menu (admin only).
- * Accepts partial updates — does not overwrite unspecified fields.
- * Body: { menu, categories, taxes, serviceCharge, branding }
+ * Update Menu (admin protected)
+ * POST /api/:rid/admin/menu
+ *
+ * Writes to Menu collection only. Admin document is ensured to exist (no menu copy).
  */
 async function updateMenu(req, res, next) {
   try {
@@ -215,54 +271,80 @@ async function updateMenu(req, res, next) {
     if (!rid)
       return res.status(400).json({ error: "Missing restaurant id (rid)" });
 
-    // Update Menu collection
-    const menuUpdate = {};
-    if (typeof incoming.menu !== "undefined") menuUpdate.items = incoming.menu;
+    // Prepare update fields (only set provided)
+    const updateFields = {};
+    if (typeof incoming.menu !== "undefined")
+      updateFields.items = incoming.menu;
     if (typeof incoming.categories !== "undefined")
-      menuUpdate.categories = incoming.categories;
+      updateFields.categories = incoming.categories;
     if (typeof incoming.taxes !== "undefined")
-      menuUpdate.taxes = incoming.taxes;
+      updateFields.taxes = incoming.taxes;
     if (typeof incoming.serviceCharge !== "undefined")
-      menuUpdate.serviceCharge = incoming.serviceCharge;
+      updateFields.serviceCharge = incoming.serviceCharge;
     if (typeof incoming.branding !== "undefined")
-      menuUpdate.branding = incoming.branding;
+      updateFields.branding = incoming.branding;
 
-    const menuDoc = await Menu.findOneAndUpdate(
-      { restaurantId: rid },
-      menuUpdate,
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-
-    // Update Admin collection for backward compatibility
-    const admin = await Admin.findOne({ restaurantId: rid });
-    if (!admin) {
-      return res.status(404).json({ error: "Admin configuration not found" });
+    let menuResult = null;
+    if (Menu) {
+      // try to find active menu for this restaurant
+      let menuDoc = await Menu.findOne({ restaurantId: rid, isActive: true });
+      if (menuDoc) {
+        // apply only provided fields
+        Object.assign(menuDoc, updateFields);
+        menuDoc.updatedAt = Date.now();
+        menuResult = await menuDoc.save();
+      } else {
+        // create new active menu; pick version = highest+1 or 1
+        const last = await Menu.findOne({ restaurantId: rid })
+          .sort({ version: -1 })
+          .lean();
+        const version = last && last.version ? last.version + 1 : 1;
+        const newDoc = {
+          restaurantId: rid,
+          version,
+          isActive: true,
+          title: incoming.title || `${rid} menu`,
+          items: updateFields.items || [],
+          categories: updateFields.categories || [],
+          taxes: updateFields.taxes || [],
+          serviceCharge:
+            typeof updateFields.serviceCharge !== "undefined"
+              ? updateFields.serviceCharge
+              : 0,
+          branding: updateFields.branding || {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        menuResult = await Menu.create(newDoc);
+      }
+    } else {
+      // Menu model not available - cannot update menu collection
+      return res
+        .status(501)
+        .json({ error: "Menu collection not available on server." });
     }
 
-    if (typeof incoming.menu !== "undefined") admin.menu = incoming.menu;
-    if (typeof incoming.categories !== "undefined")
-      admin.categories = incoming.categories;
-    if (typeof incoming.taxes !== "undefined") admin.taxes = incoming.taxes;
-    if (typeof incoming.serviceCharge !== "undefined")
-      admin.serviceCharge = incoming.serviceCharge;
-    if (typeof incoming.branding !== "undefined")
-      admin.branding = incoming.branding;
+    // Ensure Admin exists minimally (do not copy menu into Admin)
+    await Admin.updateOne(
+      { restaurantId: rid },
+      {
+        $setOnInsert: { restaurantId: rid, hashedPin: "" },
+        $set: { updatedAt: Date.now() },
+      },
+      { upsert: true }
+    );
 
-    await admin.save();
-
-    // Publish event
     safePublish(`restaurant:${rid}:staff`, {
       event: "menuUpdated",
       data: { timestamp: new Date() },
     });
 
-    // Return the updated menu from the Menu collection
     return res.json({
-      menu: menuDoc.items || {},
-      categories: menuDoc.categories || [],
-      taxes: menuDoc.taxes || null,
-      serviceCharge: menuDoc.serviceCharge || 0,
-      branding: menuDoc.branding || null,
+      menu: menuResult.items || [],
+      categories: menuResult.categories || [],
+      taxes: menuResult.taxes || [],
+      serviceCharge: menuResult.serviceCharge || 0,
+      branding: menuResult.branding || {},
     });
   } catch (err) {
     logger && logger.error && logger.error("Update menu error:", err);
@@ -271,8 +353,188 @@ async function updateMenu(req, res, next) {
 }
 
 /**
- * Get analytics using aggregation for better performance.
- * Query: ?period=daily|weekly|monthly
+ * Add a single menu item (admin)
+ * POST /api/:rid/admin/menu/items
+ */
+async function addMenuItem(req, res, next) {
+  try {
+    const { rid } = req.params;
+    const { item } = req.body || {};
+    if (!rid)
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    if (!item || typeof item !== "object")
+      return res.status(400).json({ error: "Valid menu item required" });
+
+    // minimal validation
+    if (!item.name || typeof item.name !== "string")
+      return res.status(400).json({ error: "Item name required" });
+    if (typeof item.price !== "number")
+      return res.status(400).json({ error: "Item price required (number)" });
+    const categoryName =
+      item.category && typeof item.category === "string"
+        ? item.category
+        : "Uncategorized";
+
+    // generate itemId
+    const itemId = `i_${mongoose.Types.ObjectId().toString()}`;
+    const newItem = {
+      itemId,
+      name: item.name,
+      description: item.description || "",
+      price: item.price,
+      currency: item.currency || "INR",
+      image: item.image || null,
+      isActive: typeof item.isActive === "boolean" ? item.isActive : true,
+      isVegetarian: !!item.isVegetarian,
+      preparationTime:
+        typeof item.preparationTime === "number" ? item.preparationTime : null,
+      metadata: item.metadata || {},
+    };
+
+    // If Menu model exists, perform updates (atomic-ish)
+    if (Menu) {
+      const session = await mongoose.startSession();
+      try {
+        session.startTransaction();
+
+        // ensure active menu exists (upsert)
+        const menuDoc = await Menu.findOneAndUpdate(
+          { restaurantId: rid, isActive: true },
+          {
+            $setOnInsert: {
+              restaurantId: rid,
+              version: 1,
+              title: `${rid} menu`,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+            $push: { items: newItem },
+          },
+          { new: true, upsert: true, session }
+        );
+
+        // Ensure category exists; if not, push new category with this itemId
+        await Menu.updateOne(
+          { _id: menuDoc._id, "categories.name": { $ne: categoryName } },
+          { $push: { categories: { name: categoryName, itemIds: [itemId] } } },
+          { session }
+        );
+
+        // If category exists but does not reference this item, add it
+        await Menu.updateOne(
+          {
+            _id: menuDoc._id,
+            "categories.name": categoryName,
+            "categories.itemIds": { $ne: itemId },
+          },
+          { $push: { "categories.$.itemIds": itemId } },
+          { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+      } catch (txErr) {
+        await session.abortTransaction();
+        session.endSession();
+        throw txErr;
+      }
+    } else {
+      // Cannot add menu item without Menu collection
+      return res
+        .status(501)
+        .json({ error: "Menu collection not available on server." });
+    }
+
+    // Ensure Admin exists minimally (do not store menu)
+    await Admin.updateOne(
+      { restaurantId: rid },
+      {
+        $setOnInsert: { restaurantId: rid, hashedPin: "" },
+        $set: { updatedAt: Date.now() },
+      },
+      { upsert: true }
+    );
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "menuItemAdded",
+      data: {
+        itemId,
+        name: newItem.name,
+        category: categoryName,
+        createdAt: new Date(),
+      },
+    });
+
+    return res.status(201).json({
+      item: {
+        itemId: newItem.itemId,
+        name: newItem.name,
+        price: newItem.price,
+        description: newItem.description,
+        category: categoryName,
+        image: newItem.image,
+        isVegetarian: newItem.isVegetarian,
+        preparationTime: newItem.preparationTime,
+      },
+    });
+  } catch (err) {
+    logger && logger.error && logger.error("Add menu item error:", err);
+    return next(err);
+  }
+}
+
+/**
+ * Update global config (taxPercent, globalDiscountPercent, serviceCharge)
+ * PATCH /api/:rid/admin/config
+ *
+ * Stores values under admin.settings to keep a single config location.
+ */
+async function updateConfig(req, res, next) {
+  try {
+    const { rid } = req.params;
+    const { taxPercent, globalDiscountPercent, serviceCharge } = req.body || {};
+
+    if (!rid)
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+
+    const settings = {};
+    if (typeof taxPercent !== "undefined") {
+      settings.taxPercent = Number(taxPercent);
+    }
+    if (typeof globalDiscountPercent !== "undefined") {
+      settings.globalDiscountPercent = Number(globalDiscountPercent);
+    }
+    if (typeof serviceCharge !== "undefined") {
+      settings.serviceCharge = Number(serviceCharge);
+    }
+
+    if (Object.keys(settings).length === 0) {
+      return res.status(400).json({ error: "No config fields provided" });
+    }
+
+    // Persist settings under admin.settings using updateOne (safe even if schema doesn't define it)
+    const upd = {
+      $setOnInsert: { restaurantId: rid, hashedPin: "" },
+      $set: { updatedAt: Date.now(), settings },
+    };
+    await Admin.updateOne({ restaurantId: rid }, upd, { upsert: true });
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "configUpdated",
+      data: { settings },
+    });
+
+    const admin = await Admin.findOne({ restaurantId: rid }).lean();
+    return res.json(sanitizeAdmin(admin));
+  } catch (err) {
+    logger && logger.error && logger.error("Update config error:", err);
+    return next(err);
+  }
+}
+
+/**
+ * Analytics (keeps your previous logic)
+ * GET /api/:rid/admin/analytics?period=daily|weekly|monthly
  */
 async function getAnalytics(req, res, next) {
   try {
@@ -300,7 +562,6 @@ async function getAnalytics(req, res, next) {
         startDate = new Date(now.setHours(0, 0, 0, 0));
     }
 
-    // Total revenue (paid bills) and count using aggregation
     const billMatch = {
       $match: {
         restaurantId: rid,
@@ -308,7 +569,6 @@ async function getAnalytics(req, res, next) {
         createdAt: { $gte: startDate },
       },
     };
-
     const billAgg = await Bill.aggregate([
       billMatch,
       {
@@ -319,25 +579,17 @@ async function getAnalytics(req, res, next) {
         },
       },
     ]);
-
     const totalRevenue = (billAgg[0] && billAgg[0].totalRevenue) || 0;
 
-    // Orders: count and top items + peak hours with aggregation
     const orderMatch = {
-      $match: {
-        restaurantId: rid,
-        createdAt: { $gte: startDate },
-      },
+      $match: { restaurantId: rid, createdAt: { $gte: startDate } },
     };
-
-    // order count
     const orderCountAgg = await Order.aggregate([
       orderMatch,
       { $count: "count" },
     ]);
     const orderCount = (orderCountAgg[0] && orderCountAgg[0].count) || 0;
 
-    // Top items (unwind items, group by name)
     const topItemsAgg = await Order.aggregate([
       orderMatch,
       { $unwind: { path: "$items", preserveNullAndEmptyArrays: false } },
@@ -351,31 +603,18 @@ async function getAnalytics(req, res, next) {
       { $limit: 5 },
       { $project: { name: "$_id", quantity: 1, _id: 0 } },
     ]);
-
     const topItems = topItemsAgg || [];
 
-    // Peak hours (group by hour)
     const peakHoursAgg = await Order.aggregate([
       orderMatch,
-      {
-        $project: {
-          hour: { $hour: "$createdAt" },
-        },
-      },
-      {
-        $group: {
-          _id: "$hour",
-          count: { $sum: 1 },
-        },
-      },
+      { $project: { hour: { $hour: "$createdAt" } } },
+      { $group: { _id: "$hour", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 3 },
       { $project: { hour: "$_id", count: 1, _id: 0 } },
     ]);
-
     const peakHours = peakHoursAgg || [];
 
-    // unpaid/voided bills counts
     const [unpaidBills, voidedBills] = await Promise.all([
       Bill.countDocuments({
         restaurantId: rid,
@@ -405,8 +644,8 @@ async function getAnalytics(req, res, next) {
 }
 
 /**
- * Export report (create job placeholder)
- * Body: { format: 'csv'|'pdf', period }
+ * Export report (keeps existing behavior)
+ * POST /api/:rid/admin/export
  */
 async function exportReport(req, res, next) {
   try {
@@ -427,13 +666,11 @@ async function exportReport(req, res, next) {
       createdAt: new Date(),
     };
 
-    // publish that a report job was created
     safePublish(`restaurant:${rid}:staff`, {
       event: "reportRequested",
       data: { reportId, format, period },
     });
 
-    // In real app: push to queue, return job id
     return res.json({
       ...job,
       downloadUrl: `/api/${rid}/admin/reports/${reportId}`,
@@ -445,8 +682,8 @@ async function exportReport(req, res, next) {
 }
 
 /**
- * Update table configuration — implemented to actually update Table model if exists.
- * Body: { capacity, isActive }
+ * Update table (admin)
+ * PATCH /api/:rid/admin/tables/:id
  */
 async function updateTable(req, res, next) {
   try {
@@ -457,7 +694,6 @@ async function updateTable(req, res, next) {
       return res.status(400).json({ error: "Missing restaurant id (rid)" });
     if (!id) return res.status(400).json({ error: "Missing table id" });
 
-    // Lazy load Table model to avoid circular requires in some structures
     let Table;
     try {
       Table = require("../models/table.model");
@@ -466,7 +702,6 @@ async function updateTable(req, res, next) {
     }
 
     if (!Table) {
-      // fallback simulated response (old behavior)
       return res.json({
         tableId: id,
         capacity,
@@ -492,7 +727,6 @@ async function updateTable(req, res, next) {
     if (!table)
       return res.status(404).json({ error: "Table not found or inactive" });
 
-    // notify staff
     safePublish(`restaurant:${rid}:staff`, {
       event: "tableStatusUpdated",
       data: { tableId: id, isActive },
@@ -506,8 +740,8 @@ async function updateTable(req, res, next) {
 }
 
 /**
- * Update admin PIN (authenticated)
- * Body: { currentPin, newPin }
+ * Update admin PIN (admin only)
+ * PATCH /api/:rid/admin/pin
  */
 async function updatePin(req, res, next) {
   try {
@@ -533,8 +767,6 @@ async function updatePin(req, res, next) {
     const saltRounds = getBcryptRounds();
     const newHash = await bcrypt.hash(newPin, saltRounds);
     admin.hashedPin = newHash;
-
-    // revoke override tokens on PIN change (security)
     admin.overrideTokens = [];
     await admin.save();
 
@@ -551,8 +783,8 @@ async function updatePin(req, res, next) {
 }
 
 /**
- * Update staff aliases (create admin if missing)
- * Body: { staffAliases: [string] }
+ * Update staff aliases (admin)
+ * PATCH /api/:rid/admin/staff-aliases
  */
 async function updateStaffAliases(req, res, next) {
   try {
@@ -561,16 +793,13 @@ async function updateStaffAliases(req, res, next) {
 
     if (!rid)
       return res.status(400).json({ error: "Missing restaurant id (rid)" });
-    if (!Array.isArray(staffAliases) || staffAliases.length === 0) {
+    if (!Array.isArray(staffAliases) || staffAliases.length === 0)
       return res.status(400).json({ error: "Valid staff aliases required" });
-    }
 
     let admin = await Admin.findOne({ restaurantId: rid });
-    if (!admin) {
+    if (!admin)
       admin = new Admin({ restaurantId: rid, staffAliases, hashedPin: "" });
-    } else {
-      admin.staffAliases = staffAliases;
-    }
+    else admin.staffAliases = staffAliases;
 
     await admin.save();
 
@@ -586,8 +815,47 @@ async function updateStaffAliases(req, res, next) {
   }
 }
 
+/**
+ * Reopen a finalized bill (admin override)
+ * POST /api/:rid/admin/bills/:billId/reopen
+ */
+async function reopenBill(req, res, next) {
+  try {
+    const { rid, billId } = req.params;
+    const { reason } = req.body || {};
+
+    if (!rid || !billId)
+      return res.status(400).json({ error: "Missing params" });
+
+    const bill = await Bill.findOne({ _id: billId, restaurantId: rid });
+    if (!bill) return res.status(404).json({ error: "Bill not found" });
+
+    if (bill.status !== "finalized")
+      return res.status(400).json({ error: "Bill is not finalized" });
+
+    // record audit metadata
+    bill.status = "draft";
+    bill.adminReopened = {
+      by: req.user ? req.user.restaurantId || "admin" : "admin",
+      reason: reason || "admin reopen",
+      at: new Date(),
+    };
+    await bill.save();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "billReopened",
+      data: { billId },
+    });
+    return res.json({ success: true, data: bill });
+  } catch (err) {
+    logger && logger.error && logger.error("Reopen bill error:", err);
+    return next(err);
+  }
+}
+
 module.exports = {
   login,
+  staffLogin,
   generateOverrideToken,
   getMenu,
   updateMenu,
@@ -596,4 +864,7 @@ module.exports = {
   updateTable,
   updatePin,
   updateStaffAliases,
+  addMenuItem,
+  updateConfig,
+  reopenBill,
 };

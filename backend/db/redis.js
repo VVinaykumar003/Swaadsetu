@@ -1,57 +1,58 @@
-// db/redis.js
-// Lazy Redis client helper — doesn't throw on import.
-// Use connectRedis() to attempt connection and getRedisClient() to retrieve the client.
+// db/redis.js - in-memory dev stub (NOT for production)
+const EventEmitter = require("events");
+const emitter = new EventEmitter();
 
-const { createClient } = require("redis");
+const idempotencyStore = new Map(); // key -> { value, expiresAt }
+const locks = new Map(); // key -> token (simple)
 
-const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
-
-let client = null;
-
-function createClientInstance() {
-  if (client) return client;
-  client = createClient({ url: REDIS_URL });
-
-  client.on("error", (err) => {
-    // keep logging but do not throw from event handler
-    console.error("Redis Client Error", err);
-  });
-
-  client.on("connect", () => {
-    console.log("Redis client connecting...");
-  });
-
-  client.on("ready", () => {
-    console.log("Redis client ready");
-  });
-
-  return client;
+function publishEvent(channel, message) {
+  // Asynchronous publish to emulate Redis pub/sub
+  setImmediate(() => emitter.emit(channel, message));
+  return Promise.resolve(true);
 }
 
-/**
- * Attempt to connect the Redis client.
- * Returns the connected client or throws if connection fails.
- */
-async function connectRedis() {
-  const c = createClientInstance();
-
-  // If already open/connected, return
-  if (c.isOpen) return c;
-
-  try {
-    await c.connect();
-    return c;
-  } catch (err) {
-    // bubble up so caller can decide what to do
-    throw err;
+async function checkIdempotency(key) {
+  const entry = idempotencyStore.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt && Date.now() > entry.expiresAt) {
+    idempotencyStore.delete(key);
+    return null;
   }
+  return entry.value;
 }
 
-function getRedisClient() {
-  return createClientInstance();
+async function storeIdempotency(key, value, ttlSec = 24 * 3600) {
+  const expiresAt = Date.now() + ttlSec * 1000;
+  idempotencyStore.set(key, { value, expiresAt });
+  return true;
+}
+
+// Simple lock: returns true if acquired, false otherwise
+async function acquireLock(key, ttlMs = 5000) {
+  if (locks.has(key)) return false;
+  locks.set(key, Date.now() + ttlMs);
+  // auto-release after ttl
+  setTimeout(() => {
+    const v = locks.get(key);
+    if (v && v <= Date.now()) locks.delete(key);
+  }, ttlMs + 50);
+  return true;
+}
+
+async function releaseLock(key) {
+  if (locks.has(key)) {
+    locks.delete(key);
+    return true;
+  }
+  return false;
 }
 
 module.exports = {
-  getRedisClient,
-  connectRedis,
+  publishEvent,
+  checkIdempotency,
+  storeIdempotency,
+  acquireLock,
+  releaseLock,
+  // expose emitter for local listeners
+  emitter,
 };

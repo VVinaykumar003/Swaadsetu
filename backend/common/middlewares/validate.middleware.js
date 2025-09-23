@@ -82,18 +82,25 @@ async function validateManager(req, res, next) {
 
   try {
     const admin = await Admin.findOne({ restaurantId: rid }).lean();
-    if (
-      !admin ||
-      !Array.isArray(admin.overrideTokens) ||
-      !admin.overrideTokens.includes(overrideToken)
-    ) {
+    if (!admin || !Array.isArray(admin.overrideTokens)) {
       return res.status(401).json({ error: "Invalid override token" });
     }
 
-    // consume the token so it can't be reused
+    // Find token with matching value and valid expiration
+    const tokenObj = admin.overrideTokens.find(
+      (t) => t.token === overrideToken && new Date(t.expiresAt) > new Date()
+    );
+
+    if (!tokenObj) {
+      return res
+        .status(401)
+        .json({ error: "Invalid or expired override token" });
+    }
+
+    // Remove the specific token object
     await Admin.updateOne(
       { restaurantId: rid },
-      { $pull: { overrideTokens: overrideToken } }
+      { $pull: { overrideTokens: { token: overrideToken } } }
     );
 
     req.managerValidated = true;

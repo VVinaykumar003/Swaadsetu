@@ -1,6 +1,5 @@
 // controllers/call.controller.js
-// Hardened version: safe when Redis helpers are missing (no-op fallback).
-// Keeps original behavior when checkIdempotency/publishEvent are available.
+// Hardened version with idempotency, role checks, and staffAlias validation.
 
 const Call = require("../models/call.model");
 
@@ -12,9 +11,25 @@ try {
   console.warn("Logger not found, using console as fallback.");
 }
 
-// Defensive load for Redis helpers (checkIdempotency, publishEvent)
+// Helpers for staffAlias and role checks
+let helpers = null;
+try {
+  helpers = require("../common/libs/helpers");
+} catch (e) {
+  helpers = null;
+  logger &&
+    logger.warn &&
+    logger.warn("helpers not found; staffAlias validation may be skipped.");
+}
+const ensureStaffAliasValid = helpers
+  ? helpers.ensureStaffAliasValid
+  : async () => true;
+const requestHasRole = helpers ? helpers.requestHasRole : () => true;
+
+// Defensive load for Redis helpers (checkIdempotency, publishEvent, storeIdempotency)
 let checkIdempotency = null;
 let publishEvent = null;
+let storeIdempotency = null;
 (function tryLoadRedisHelpers() {
   const candidates = [
     "../db/redis",
@@ -43,6 +58,11 @@ let publishEvent = null;
           (typeof mod === "function" ? mod : null);
       }
 
+      if (!storeIdempotency) {
+        storeIdempotency =
+          mod.storeIdempotency || mod.store_idempotency || null;
+      }
+
       if (checkIdempotency || publishEvent) break;
     } catch (err) {
       // ignore and continue searching
@@ -65,6 +85,14 @@ let publishEvent = null;
       );
     publishEvent = null;
   }
+  if (!storeIdempotency) {
+    logger &&
+      logger.warn &&
+      logger.warn(
+        "storeIdempotency not found; idempotency mapping not persisted."
+      );
+    storeIdempotency = null;
+  }
 })();
 
 // Safe wrappers to avoid crashes/unhandled rejections
@@ -75,6 +103,15 @@ async function safeCheckIdempotency(key) {
   } catch (err) {
     logger && logger.error && logger.error("checkIdempotency error:", err);
     return null;
+  }
+}
+async function safeStoreIdempotency(key, value, ttlSec = 24 * 3600) {
+  if (typeof storeIdempotency !== "function") return false;
+  try {
+    return await storeIdempotency(key, value, ttlSec);
+  } catch (err) {
+    logger && logger.error && logger.error("storeIdempotency error:", err);
+    return false;
   }
 }
 
@@ -94,7 +131,7 @@ function safePublish(channel, message) {
   }
 }
 
-// Create new call
+// Create new call (public)
 async function createCall(req, res, next) {
   try {
     const { rid } = req.params;
@@ -105,7 +142,7 @@ async function createCall(req, res, next) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Handle idempotency if implemented
+    // Idempotency header
     const headerKey =
       req.headers["x-idempotency-key"] || req.headers["x-idempotency"];
     const idempotencyKey =
@@ -122,6 +159,11 @@ async function createCall(req, res, next) {
       }
     }
 
+    if (staffAlias) {
+      const valid = await ensureStaffAliasValid(rid, staffAlias);
+      if (!valid) return res.status(400).json({ error: "Invalid staffAlias" });
+    }
+
     // Create call
     const call = new Call({
       restaurantId: rid,
@@ -133,28 +175,47 @@ async function createCall(req, res, next) {
 
     await call.save();
 
+    // persist idempotency mapping if available
+    if (idempotencyKey) {
+      try {
+        await safeStoreIdempotency(idempotencyKey, call, 24 * 3600);
+      } catch (e) {
+        // non-fatal
+      }
+    }
+
     // Publish event (safe no-op if publish unavailable)
     safePublish(`restaurant:${rid}:staff`, {
       event: "callCreated",
       data: call,
     });
 
-    res.status(201).json(call);
+    return res.status(201).json(call);
   } catch (error) {
     logger && logger.error && logger.error("Call creation error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Resolve call
+// Resolve call (staff/admin only)
 async function resolveCall(req, res, next) {
   try {
     const { rid, id } = req.params;
     const { staffAlias } = req.body;
 
+    // require staff/admin role
+    if (!requestHasRole(req, ["staff", "admin"])) {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: staff/admin required to resolve call" });
+    }
+
     if (!staffAlias) {
       return res.status(400).json({ error: "Staff alias required" });
     }
+
+    const valid = await ensureStaffAliasValid(rid, staffAlias);
+    if (!valid) return res.status(400).json({ error: "Invalid staffAlias" });
 
     const call = await Call.findOneAndUpdate(
       { _id: id, restaurantId: rid, status: "active" },
@@ -179,26 +240,32 @@ async function resolveCall(req, res, next) {
       data: call,
     });
 
-    res.json(call);
+    return res.json(call);
   } catch (error) {
     logger && logger.error && logger.error("Call resolution error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Get active calls for restaurant
+// Get active calls for restaurant (staff)
 async function getActiveCalls(req, res, next) {
   try {
     const { rid } = req.params;
+
+    // Require staff/admin to view active calls if auth present
+    if (!requestHasRole(req, ["staff", "admin"])) {
+      return res.status(403).json({ error: "Forbidden: staff/admin required" });
+    }
+
     const calls = await Call.find({
       restaurantId: rid,
       status: "active",
     }).sort({ createdAt: -1 });
 
-    res.json(calls);
+    return res.json(calls);
   } catch (error) {
     logger && logger.error && logger.error("Active calls fetch error:", error);
-    next(error);
+    return next(error);
   }
 }
 

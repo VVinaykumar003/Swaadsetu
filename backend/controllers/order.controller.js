@@ -1,21 +1,37 @@
 // controllers/order.controller.js
-// Hardened version: safe when Redis helpers are missing (no-op fallback).
-// Preserves original behavior when checkIdempotency/publishEvent are available.
+// Upgraded: priceAtOrder, optimistic locking (version), status canonicalization,
+// idempotency-friendly, defensive Redis/publish helpers.
 
 const Order = require("../models/order.model");
+const Menu = (() => {
+  try {
+    return require("../models/menu.model");
+  } catch (e) {
+    return null;
+  }
+})();
+const Admin = (() => {
+  try {
+    return require("../models/admin.model");
+  } catch (e) {
+    return null;
+  }
+})();
 
-// Defensive logger (fallback to console)
+const { getPricingConfig } = require("../common/libs/pricingHelper");
+
+// Defensive logger
 let logger = console;
 try {
   logger = require("../common/libs/logger") || console;
 } catch (e) {
-  // keep console as fallback
   console.warn("Logger not found, using console as fallback.");
 }
 
-// Defensive load for Redis helpers (checkIdempotency, publishEvent)
+// Defensive load for Redis helpers (checkIdempotency, publishEvent, lock)
 let checkIdempotency = null;
 let publishEvent = null;
+let redisLock = null;
 (function tryLoadRedisHelpers() {
   const candidates = [
     "../db/redis",
@@ -44,9 +60,21 @@ let publishEvent = null;
           (typeof mod === "function" ? mod : null);
       }
 
+      // optional distributed lock helper (setLock, releaseLock) if implemented
+      if (!redisLock) {
+        redisLock = mod.acquireLock || mod.setLock || mod.lock || null;
+        // release counterpart
+        redisLock =
+          redisLock && typeof redisLock === "function"
+            ? mod
+            : redisLock
+            ? mod
+            : null;
+      }
+
       if (checkIdempotency || publishEvent) break;
     } catch (err) {
-      // ignore and continue searching
+      // ignore
     }
   }
 
@@ -68,7 +96,7 @@ let publishEvent = null;
   }
 })();
 
-// Safe wrappers to avoid crashes/unhandled rejections
+// Safe wrappers
 async function safeCheckIdempotency(key) {
   if (typeof checkIdempotency !== "function") return null;
   try {
@@ -82,9 +110,9 @@ async function safeCheckIdempotency(key) {
 function safePublish(channel, message) {
   if (typeof publishEvent !== "function") return;
   try {
-    const res = publishEvent(channel, message);
-    if (res && typeof res.then === "function") {
-      res.catch((err) => {
+    const out = publishEvent(channel, message);
+    if (out && typeof out.then === "function") {
+      out.catch((err) => {
         logger &&
           logger.error &&
           logger.error("publishEvent promise rejected:", err);
@@ -95,25 +123,52 @@ function safePublish(channel, message) {
   }
 }
 
+// Helper - canonicalize status inputs
+const STATUS_MAP = {
+  pending: "placed",
+  placed: "placed",
+  accepted: "accepted",
+  preparing: "preparing",
+  ready: "done",
+  done: "done",
+  served: "done",
+};
+
 // Create new order
 async function createOrder(req, res, next) {
   try {
     const { rid } = req.params;
-    const { tableId, sessionId, items, isCustomerOrder, staffAlias } = req.body;
+    const {
+      tableId,
+      sessionId,
+      items,
+      isCustomerOrder,
+      staffAlias,
+      customerName,
+      customerContact,
+      customerEmail,
+    } = req.body;
 
-    // Validate required fields
-    if (!tableId || !sessionId || !items?.length) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (
+      !rid ||
+      !tableId ||
+      !sessionId ||
+      !Array.isArray(items) ||
+      !items.length ||
+      !customerName
+    ) {
+      return res.status(400).json({
+        error:
+          "Missing required fields: tableId, sessionId, items, customerName",
+      });
     }
 
-    // Handle idempotency if implemented
+    // Idempotency header support (x-idempotency-key)
     const headerKey =
       req.headers["x-idempotency-key"] || req.headers["x-idempotency"];
-    const idempotencyKey =
-      headerKey && typeof headerKey === "string"
-        ? `idempotency:${rid}:${sessionId}:${headerKey}`
-        : null;
-
+    const idempotencyKey = headerKey
+      ? `idempotency:order:${rid}:${sessionId}:${headerKey}`
+      : null;
     if (idempotencyKey) {
       const existing = await safeCheckIdempotency(idempotencyKey);
       if (existing) {
@@ -123,89 +178,207 @@ async function createOrder(req, res, next) {
       }
     }
 
-    // Calculate total amount (guard numeric fields)
-    const totalAmount = (items || []).reduce((sum, item) => {
-      const price =
-        typeof item.price === "number" ? item.price : Number(item.price) || 0;
-      const qty =
-        typeof item.quantity === "number"
-          ? item.quantity
-          : Number(item.quantity) || 0;
-      return sum + price * qty;
-    }, 0);
+    // Build order items with server-side priceAtOrder lookup
+    const resolvedItems = [];
+    for (const it of items) {
+      const menuItemId = it.menuItemId || it.itemId || it.itemId;
+      let priceAtOrder = 0;
+      let name = it.name || "";
+      if (menuItemId && Menu) {
+        try {
+          // try to find item by itemId or itemId field
+          const menuDoc = await Menu.findOne({
+            restaurantId: rid,
+            isActive: true,
+          }).lean();
+          if (menuDoc && Array.isArray(menuDoc.items)) {
+            const found = menuDoc.items.find(
+              (m) =>
+                m.itemId === menuItemId ||
+                m.id === menuItemId ||
+                m._id == menuItemId
+            );
+            if (found) {
+              priceAtOrder = Number(found.price || 0);
+              name = found.name || name;
+            }
+          }
+        } catch (e) {
+          logger &&
+            logger.warn &&
+            logger.warn("Menu lookup failed:", e && e.message);
+        }
+      }
 
-    // Normalize isCustomerOrder default properly
+      // Fallback to client-provided price if menu not found
+      if (!priceAtOrder) {
+        priceAtOrder =
+          typeof it.price === "number" ? it.price : Number(it.price) || 0;
+      }
+
+      resolvedItems.push({
+        menuItemId: menuItemId || null,
+        name: name || it.name || "Item",
+        quantity:
+          typeof it.quantity === "number"
+            ? it.quantity
+            : Number(it.quantity) || 1,
+        priceAtOrder,
+      });
+    }
+
+    // compute total server-side
+    const totalAmount = resolvedItems.reduce(
+      (s, it) => s + it.priceAtOrder * it.quantity,
+      0
+    );
+
     const finalIsCustomerOrder =
       typeof isCustomerOrder === "boolean" ? isCustomerOrder : true;
 
-    // Create order
-    const order = new Order({
+    const orderDoc = new Order({
       restaurantId: rid,
       tableId,
       sessionId,
-      items,
+      items: resolvedItems,
       totalAmount,
       isCustomerOrder: finalIsCustomerOrder,
-      staffAlias,
+      staffAlias: staffAlias || null,
+      customerName,
+      customerContact: customerContact || undefined,
+      customerEmail: customerEmail || undefined,
+      status: "placed",
+      version: 1,
     });
 
-    await order.save();
+    await orderDoc.save();
 
-    // Publish event (safe no-op if publishEvent unavailable)
+    // Calculate pre-bill using pricing config
+    const { taxes, serviceCharge, globalDiscountPercent } =
+      await getPricingConfig(rid);
+
+    // Apply global discount
+    const discountAmount = (totalAmount * globalDiscountPercent) / 100;
+    const amountAfterDiscount = totalAmount - discountAmount;
+
+    // Calculate taxes
+    const taxBreakdown = [];
+    let totalTax = 0;
+    for (const tax of taxes) {
+      const taxAmount = (amountAfterDiscount * tax.percent) / 100;
+      taxBreakdown.push({
+        name: tax.name || "Tax",
+        rate: tax.percent,
+        amount: taxAmount,
+      });
+      totalTax += taxAmount;
+    }
+
+    // Calculate service charge
+    const serviceChargeAmount = (amountAfterDiscount * serviceCharge) / 100;
+
+    // Calculate total
+    const total = amountAfterDiscount + totalTax + serviceChargeAmount;
+
+    const preBill = {
+      subtotal: totalAmount,
+      taxes: taxBreakdown,
+      serviceCharge: serviceChargeAmount,
+      discount: discountAmount,
+      total,
+    };
+
+    // publish
     safePublish(`restaurant:${rid}:staff`, {
       event: "orderCreated",
-      data: order,
+      data: orderDoc,
     });
 
-    res.status(201).json(order);
+    return res.status(201).json({ order: orderDoc, preBill });
   } catch (error) {
     logger && logger.error && logger.error("Order creation error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Update order status
+// Update order status with optimistic locking
 async function updateOrderStatus(req, res, next) {
   try {
     const { rid, id } = req.params;
-    const { status, staffAlias } = req.body;
+    const { status, staffAlias, version } = req.body;
 
-    const order = await Order.findOneAndUpdate(
-      { _id: id, restaurantId: rid },
-      { status, updatedAt: Date.now(), staffAlias },
-      { new: true }
-    );
+    if (!rid || !id || !status)
+      return res.status(400).json({ error: "Missing parameters" });
 
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    const canonicalStatus =
+      STATUS_MAP[(status || "").toString().toLowerCase()] || status;
+
+    // optimistic locking: require version
+    if (typeof version === "undefined") {
+      // If client didn't send version, still attempt update but warn: better to require version
+      logger &&
+        logger.warn &&
+        logger.warn(
+          "updateOrderStatus called without version; consider sending version for optimistic locking"
+        );
     }
 
-    // Publish event (safe no-op if publishEvent unavailable)
+    // Build update document
+    const update = {
+      status: canonicalStatus,
+      staffAlias: staffAlias || null,
+      updatedAt: Date.now(),
+    };
+
+    let order;
+    if (typeof version !== "undefined") {
+      order = await Order.findOneAndUpdate(
+        { _id: id, restaurantId: rid, version: version },
+        { $set: update, $inc: { version: 1 } },
+        { new: true }
+      );
+      if (!order) {
+        const current = await Order.findOne({
+          _id: id,
+          restaurantId: rid,
+        }).lean();
+        return res.status(409).json({ error: "Version mismatch", current });
+      }
+    } else {
+      // no version provided: do simple update and increment version
+      order = await Order.findOneAndUpdate(
+        { _id: id, restaurantId: rid },
+        { $set: update, $inc: { version: 1 } },
+        { new: true }
+      );
+    }
+
     safePublish(`restaurant:${rid}:tables:${order.tableId}`, {
       event: "orderUpdated",
       data: order,
     });
 
-    res.json(order);
+    return res.json(order);
   } catch (error) {
     logger && logger.error && logger.error("Order status update error:", error);
-    next(error);
+    return next(error);
   }
 }
 
-// Get active orders for restaurant
+// Get active orders (staff view)
 async function getActiveOrders(req, res, next) {
   try {
     const { rid } = req.params;
+    // use canonical active statuses
     const orders = await Order.find({
       restaurantId: rid,
-      status: { $in: ["pending", "approved", "preparing", "ready"] },
+      status: { $in: ["placed", "accepted", "preparing"] },
     }).sort({ createdAt: -1 });
 
-    res.json(orders);
+    return res.json(orders);
   } catch (error) {
     logger && logger.error && logger.error("Active orders fetch error:", error);
-    next(error);
+    return next(error);
   }
 }
 
@@ -222,13 +395,13 @@ async function getOrderHistory(req, res, next) {
     const orders = await Order.find({
       restaurantId: rid,
       sessionId,
-      status: "served",
+      status: "done",
     }).sort({ createdAt: -1 });
 
-    res.json(orders);
+    return res.json(orders);
   } catch (error) {
     logger && logger.error && logger.error("Order history fetch error:", error);
-    next(error);
+    return next(error);
   }
 }
 
