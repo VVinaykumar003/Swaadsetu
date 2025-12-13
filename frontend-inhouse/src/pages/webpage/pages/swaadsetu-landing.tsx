@@ -2,16 +2,7 @@ import React, { useState, useEffect } from "react";
 import Hero from "./Hero";
 import { LayoutGrid } from "../component/LayoutGrid";
 import { motion } from "framer-motion";
-import {
-  // Mail,
-  // Phone,
-  // MapPin,
-  // Linkedin,
-  // Twitter,
-  // Menu,
-  // X,
-  Check,
-} from "lucide-react";
+import { Check,} from "lucide-react";
 import { Footer } from "../component/Footer";
 import bg from "../assets/SwaadSetu_shape.png";
 
@@ -22,14 +13,14 @@ import { StaffSection } from "./staff-section";
 import { AnalyticsSection } from "./AnalyticsSection";
 import Navbar from "../component/Navbar";
 
-const decorativeShapes = [
-  { type: "circle", size: 12, top: "10%", left: "5%", color: "bg-yellow-400" },
-  { type: "square", size: 10, top: "20%", left: "90%", color: "bg-black" },
-  { type: "circle", size: 14, top: "80%", left: "15%", color: "bg-yellow-300" },
-  { type: "square", size: 8, top: "75%", left: "85%", color: "bg-black" },
-  { type: "circle", size: 10, top: "50%", left: "50%", color: "bg-yellow-400" },
-  { type: "square", size: 12, top: "40%", left: "30%", color: "bg-black" },
-];
+// const decorativeShapes = [
+//   { type: "circle", size: 12, top: "10%", left: "5%", color: "bg-yellow-400" },
+//   { type: "square", size: 10, top: "20%", left: "90%", color: "bg-black" },
+//   { type: "circle", size: 14, top: "80%", left: "15%", color: "bg-yellow-300" },
+//   { type: "square", size: 8, top: "75%", left: "85%", color: "bg-black" },
+//   { type: "circle", size: 10, top: "50%", left: "50%", color: "bg-yellow-400" },
+//   { type: "square", size: 12, top: "40%", left: "30%", color: "bg-black" },
+// ];
 
 const SkeletonOne = () => {
   return (
@@ -498,7 +489,7 @@ const SwaadsetuLanding: React.FC = () => {
         <Footer />
       </div>
 
-      <style jsx>{`
+      <style >{`
         @keyframes pulse-slow {
           0%,
           100% {

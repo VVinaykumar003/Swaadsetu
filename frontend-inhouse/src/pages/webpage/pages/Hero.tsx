@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Image from "../assets/new_banner.png";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import mobileImage from "../assets/new_mobile_banner.PNG";
+import mobileImage from "../assets/new_mobile_banner.png";
 
 const shapeVariants = {
   initial: { scale: 0, opacity: 0 },
@@ -178,6 +178,7 @@ const Hero = () => {
         />
       ))}
     </section>
+    //changes done by 
   );
 };
 
