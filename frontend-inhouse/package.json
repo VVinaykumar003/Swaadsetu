@@ -5,10 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-     "build": "vite build",
-     "build:strict": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "npx vite build",
+      "lint": "eslint ."
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
