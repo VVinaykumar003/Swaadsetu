@@ -44,9 +44,14 @@ module.exports = function authMiddleware(req, res, next) {
 
   const matchesPublic = publicRoutes.some((r) => {
     if ((r.method || "").toUpperCase() !== method) return false;
-    // treat :param placeholders as wildcard => remove them for prefix match
     const cleaned = (r.path || "").replace(/:([a-zA-Z0-9_]+)/g, "");
-    return path.startsWith(cleaned);
+
+    // normalize slashes (avoid trailing slash mismatches)
+    const normalizedPath = path.replace(/\/+$/, "");
+    const normalizedCleaned = cleaned.replace(/\/+$/, "");
+
+    // match only exact route (not subpaths)
+    return normalizedPath === normalizedCleaned;
   });
 
   if (matchesPublic) {

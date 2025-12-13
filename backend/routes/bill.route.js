@@ -1,107 +1,175 @@
+// routes/bill.route.js
 const express = require("express");
 const router = express.Router({ mergeParams: true });
-const billController = require("../controllers/bill.controller");
 
-// Import middleware
-const authMiddleware = require("../common/middlewares/auth.middleware");
-const requireRole = require("../common/middlewares/role.middleware");
+// Defensive require of bill controller
+let billController = {};
+try {
+  billController = require("../controllers/bill.controller");
+  console.log("[routes/bill.route] loaded bill.controller");
+} catch (e) {
+  console.error(
+    "[routes/bill.route] failed to require bill.controller:",
+    e && e.stack ? e.stack : e
+  );
+  billController = {};
+}
 
-// defensive imports
-let rateLimit = null;
-let validate = null;
+// Validate controller exports early and warn if missing
+(function validateHandlers() {
+  const expected = [
+    "createBillFromOrder",
+    "createBillManual",
+    "updateBillDraft",
+    "finalizeBill",
+    "markBillPaid",
+    "getActiveBills",
+    "getBillsHistory",
+    "getBillById", // ✅ ensure included
+    "incrementBillItem",
+    "decrementBillItem",
+  ];
+  for (const name of expected) {
+    if (!billController[name] || typeof billController[name] !== "function") {
+      console.warn(
+        `[routes/bill.route] WARNING: Missing or invalid handler billController.${name} (type=${typeof billController[
+          name
+        ]})`
+      );
+    } else {
+      console.log(`[routes/bill.route] handler OK: billController.${name}`);
+    }
+  }
+})();
+
+// Load auth middlewares defensively
+let authMiddleware = (req, res, next) => next();
+let requireRole = (role) => (req, res, next) => next();
 
 try {
-  rateLimit = require("../common/middlewares/rateLimit.middleware");
+  authMiddleware = require("../common/middlewares/auth.middleware");
 } catch (e) {
-  console.warn(
-    "rateLimit.middleware not available — rate limiting disabled for bill routes."
-  );
+  console.warn("[routes/bill.route] auth.middleware not found - using no-op");
+}
+try {
+  requireRole = require("../common/middlewares/role.middleware");
+} catch (e) {
+  console.warn("[routes/bill.route] role.middleware not found - using no-op");
+}
+
+// Optional validation / rate-limit middlewares (no-op fallback)
+let validate = {};
+let rateLimit = {};
+try {
+  validate = require("../common/middlewares/validate.middleware") || {};
+} catch (e) {
+  validate = {};
+}
+try {
+  rateLimit = require("../common/middlewares/rateLimit.middleware") || {};
+} catch (e) {
   rateLimit = {};
 }
 
-try {
-  validate = require("../common/middlewares/validate.middleware");
-} catch (e) {
-  console.warn(
-    "validate.middleware not available — input validation disabled for bill routes."
-  );
-  validate = {};
-}
-
-// Define role-based middleware
-const staffOrAdmin = [authMiddleware, requireRole(["staff", "admin"])];
-
-// limiter mapper
 function limiter(name) {
   if (!rateLimit || !rateLimit[name]) return (req, res, next) => next();
   return rateLimit[name];
 }
 
-// --- Routes ---
-// POST /api/:rid/bills  (staff) - create draft bill
-// apply idempotency handler if available and staff limiter
+/* ========================================================
+   ROUTES
+======================================================== */
+
+// ✅ Create bill from order (staff)
 router.post(
-  "/",
-  [
-    ...staffOrAdmin,
-    limiter("staffLimiter"),
-    // use idempotency middleware if available
-    ...(validate && validate.handleIdempotency
-      ? [validate.handleIdempotency]
-      : []),
-  ],
-  billController.createBill
+  "/orders/:orderId/bill",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  billController.createBillFromOrder
 );
 
-// PATCH /api/:rid/bills/:id - edit draft (staff)
+// Manual bill creation (admin-only)
+router.post(
+  "/bills",
+  limiter("sensitiveLimiter"),
+  authMiddleware,
+  requireRole("admin"),
+  validate.createBillManual || ((req, res, next) => next()),
+  billController.createBillManual
+);
+
+// Update draft (staff)
 router.patch(
-  "/:id",
-  [...staffOrAdmin, limiter("staffLimiter")],
+  "/bills/:id",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  validate.updateBillDraft || ((req, res, next) => next()),
   billController.updateBillDraft
 );
 
-// PATCH /api/:rid/bills/:id/finalize - finalize bill (staff) - sensitive
-router.patch(
-  "/:id/finalize",
-  [
-    ...staffOrAdmin,
-    limiter("sensitiveLimiter"),
-    // ensure staffAlias present if validate middleware is available
-    ...(validate && validate.validateStaff ? [validate.validateStaff] : []),
-  ],
+// Finalize bill (staff)
+router.post(
+  "/bills/:id/finalize",
+  limiter("sensitiveLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
   billController.finalizeBill
 );
 
-// POST /api/:rid/bills/:id/mark-paid - mark paid (staff) - sensitive
+// Mark bill paid (staff)
 router.post(
-  "/:id/mark-paid",
-  [
-    ...staffOrAdmin,
-    limiter("sensitiveLimiter"),
-    ...(validate && validate.validateStaff ? [validate.validateStaff] : []),
-  ],
+  "/bills/:id/mark-paid",
+  limiter("sensitiveLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
   billController.markBillPaid
 );
 
-// backward-compatibility: PATCH /:id/pay -> mark-paid
-router.patch(
-  "/:id/pay",
-  [
-    ...staffOrAdmin,
-    limiter("sensitiveLimiter"),
-    ...(validate && validate.validateStaff ? [validate.validateStaff] : []),
-  ],
-  billController.updatePaymentStatus || billController.markBillPaid
-);
-
-// GET /api/:rid/bills/active (staff)
+// Get active bills (staff)
 router.get(
-  "/active",
-  [...staffOrAdmin, limiter("staffLimiter")],
+  "/bills/active",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
   billController.getActiveBills
 );
 
-// GET /api/:rid/bills/history
-router.get("/history", billController.getBillsHistory);
+// Get bills history (staff)
+router.get(
+  "/bills/history",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  billController.getBillsHistory
+);
+
+// ✅ Get a single bill by ID (must come AFTER /active and /history)
+router.get(
+  "/bills/:id",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  billController.getBillById
+);
+
+// Increment bill item
+router.post(
+  "/bills/:id/items/:itemId/increment",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  billController.incrementBillItem
+);
+
+// Decrement bill item
+router.post(
+  "/bills/:id/items/:itemId/decrement",
+  limiter("standardLimiter"),
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  billController.decrementBillItem
+);
 
 module.exports = router;

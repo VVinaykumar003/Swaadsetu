@@ -7,7 +7,7 @@ const adminController = require("../controllers/admin.controller");
 const authMiddleware = require("../common/middlewares/auth.middleware");
 const requireRole = require("../common/middlewares/role.middleware");
 
-// defensive imports
+// Defensive optional imports
 let rateLimit = null;
 let validate = null;
 
@@ -49,52 +49,71 @@ router.use((req, res, next) => {
     const method = req.method;
     const path = req.originalUrl || req.url;
     const rid = req.params?.rid || null;
-
-    // use console.info so these show up at info level
-    console.info(`[${now}] [admin.route] Enter`, {
-      reqId,
-      method,
-      path,
-      rid,
-    });
+    console.info(`[${now}] [admin.route] Enter`, { reqId, method, path, rid });
   } catch (e) {
-    // don't break routes because of logging
     console.warn("[admin.route] route logger failed", e && e.message);
   }
   return next();
 });
 
-// --- Public routes ---
+// ----------------------------------------------------------------------
+// 🟢 PUBLIC ROUTES
+// ----------------------------------------------------------------------
 
-// Admin login (admin PIN) - sensitiveLimiter
-// POST /api/:rid/admin/login
+// Admin login (PIN-based)
 router.post("/login", limiter("sensitiveLimiter"), adminController.login);
 
-// Staff login (shared staff PIN) - staffLimiter
-// POST /api/:rid/admin/auth/staff-login
+// Staff login (shared PIN)
 router.post(
   "/auth/staff-login",
   limiter("staffLimiter"),
   adminController.staffLogin
 );
 
-// GET /api/:rid/admin/menu (public read)
+// Public menu (customer-facing)
 router.get("/menu", adminController.getMenu);
 
-// Generate override token via PIN (no JWT required; controller verifies PIN).
-// Rate limit to sensitiveLimiter
+// Generate override token (PIN required)
 router.post(
   "/overrides",
   limiter("sensitiveLimiter"),
   adminController.generateOverrideToken
 );
 
-// --- Protected admin routes (require admin JWT / role) ---
-// Each protected route explicitly mounts authMiddleware then requireRole('admin')
-// This avoids accidental public-route skipping or middleware-order issues.
+// ----------------------------------------------------------------------
+// 🔒 PROTECTED ADMIN ROUTES
+// ----------------------------------------------------------------------
+
+// Pricing management
+router.get(
+  "/pricing",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.getPricingConfigs
+);
+
+router.post(
+  "/pricing",
+  authMiddleware,
+  requireRole("admin"),
+  limiter("sensitiveLimiter"),
+  adminController.createPricingConfig
+);
+
+router.patch(
+  "/pricing/:version/activate",
+  authMiddleware,
+  requireRole("admin"),
+  limiter("sensitiveLimiter"),
+  adminController.activatePricingVersion
+);
+
+// ----------------------------------------------------------------------
+// 🧾 MENU MANAGEMENT
+// ----------------------------------------------------------------------
 
 /**
- * Update menu (admin)
+ * Full menu management (create / update)
  * POST /api/:rid/admin/menu
  */
 router.post(
@@ -105,7 +124,7 @@ router.post(
 );
 
 /**
- * Add single menu item (admin)
+ * Add single menu item
  * POST /api/:rid/admin/menu/items
  */
 router.post(
@@ -116,14 +135,77 @@ router.post(
 );
 
 /**
- * Analytics and export (admin)
+ * Update specific menu item
+ * PATCH /api/:rid/admin/menu/items/:itemId
  */
+router.patch(
+  "/menu/items/:itemId",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.updateMenuItem
+);
+
+/**
+ * Delete or disable specific menu item
+ * DELETE /api/:rid/admin/menu/items/:itemId
+ */
+router.delete(
+  "/menu/items/:itemId",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.deleteMenuItem
+);
+
+/**
+ * Restore (re-enable) a soft-deleted item
+ * PATCH /api/:rid/admin/menu/items/:itemId/restore
+ */
+router.patch(
+  "/menu/items/:itemId/restore",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.restoreMenuItem
+);
+
+/**
+ * Update specific category
+ * PATCH /api/:rid/admin/menu/categories/:categoryId
+ */
+router.patch(
+  "/menu/categories/:categoryId",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.updateCategory
+);
+
+/**
+ * Delete specific category
+ * DELETE /api/:rid/admin/menu/categories/:categoryId
+ */
+router.delete(
+  "/menu/categories/:categoryId",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.deleteCategory
+);
+
+/**
+ * ✅ Fetch all categories
+ * GET /api/:rid/admin/menu/categories
+ */
+router.get("/menu/categories", adminController.getAllCategories);
+
+// ----------------------------------------------------------------------
+// 📊 ANALYTICS & REPORTING
+// ----------------------------------------------------------------------
+
 router.get(
   "/analytics",
   authMiddleware,
   requireRole("admin"),
   adminController.getAnalytics
 );
+
 router.post(
   "/export",
   authMiddleware,
@@ -131,9 +213,10 @@ router.post(
   adminController.exportReport
 );
 
-/**
- * Table management (admin)
- */
+// ----------------------------------------------------------------------
+// 🪑 TABLE MANAGEMENT
+// ----------------------------------------------------------------------
+
 router.patch(
   "/tables/:id",
   authMiddleware,
@@ -141,9 +224,10 @@ router.patch(
   adminController.updateTable
 );
 
-/**
- * PIN management (admin)
- */
+// ----------------------------------------------------------------------
+// 🔐 PIN & STAFF MANAGEMENT
+// ----------------------------------------------------------------------
+
 router.patch(
   "/pin",
   authMiddleware,
@@ -152,9 +236,6 @@ router.patch(
   adminController.updatePin
 );
 
-/**
- * Staff aliases management (admin)
- */
 router.patch(
   "/staff-aliases",
   authMiddleware,
@@ -162,9 +243,10 @@ router.patch(
   adminController.updateStaffAliases
 );
 
-/**
- * Update global config (taxPercent, discount, serviceCharge) - admin
- */
+// ----------------------------------------------------------------------
+// ⚙️ GLOBAL CONFIG MANAGEMENT
+// ----------------------------------------------------------------------
+
 router.patch(
   "/config",
   authMiddleware,
@@ -172,9 +254,10 @@ router.patch(
   adminController.updateConfig
 );
 
-/**
- * Reopen finalized bill (admin override) - admin
- */
+// ----------------------------------------------------------------------
+// 💳 BILL OVERRIDES
+// ----------------------------------------------------------------------
+
 router.post(
   "/bills/:billId/reopen",
   authMiddleware,
@@ -182,5 +265,65 @@ router.post(
   adminController.reopenBill
 );
 
-// Export the router
+// ----------------------------------------------------------------------
+// 👨‍🍳 WAITER MANAGEMENT
+// ----------------------------------------------------------------------
+
+router.get(
+  "/waiters",
+  authMiddleware,
+  requireRole("admin"),
+  adminController.getWaiterNames
+    ? adminController.getWaiterNames
+    : async (req, res, next) => {
+        const Admin = require("../models/admin.model");
+        try {
+          const { rid } = req.params;
+          if (!rid)
+            return res
+              .status(400)
+              .json({ error: "Missing restaurant id (rid)" });
+          const admin = await Admin.findOne({ restaurantId: rid }).lean();
+          if (!admin)
+            return res
+              .status(404)
+              .json({ error: "Admin configuration not found" });
+          return res.json({ waiterNames: admin.waiterNames || [] });
+        } catch (err) {
+          return next(err);
+        }
+      }
+);
+
+router.post(
+  "/waiters",
+  authMiddleware,
+  requireRole("admin"),
+  limiter("sensitiveLimiter"),
+  validate.addWaiterName || ((req, res, next) => next()),
+  adminController.addWaiterName
+);
+
+router.patch(
+  "/waiters",
+  authMiddleware,
+  requireRole("admin"),
+  limiter("sensitiveLimiter"),
+  validate.updateWaiterName || ((req, res, next) => next()),
+  adminController.updateWaiterName
+);
+
+router.delete(
+  "/waiters",
+  authMiddleware,
+  requireRole("admin"),
+  limiter("sensitiveLimiter"),
+  validate.deleteWaiterName || ((req, res, next) => next()),
+  adminController.deleteWaiterName
+);
+
+// ----------------------------------------------------------------------
+// ✅ EXPORT ROUTER
+// ----------------------------------------------------------------------
+
 module.exports = router;

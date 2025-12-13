@@ -1,210 +1,148 @@
 // controllers/call.controller.js
-// Hardened version with idempotency, role checks, and staffAlias validation.
+// Traditional HTTP-based call system — auto-fetches active order info, no Redis, no sockets.
 
 const Call = require("../models/call.model");
+const mongoose = require("mongoose");
 
-// Defensive logger (fallback to console)
+// ---------------------- LOGGER (DEFENSIVE) ----------------------
 let logger = console;
 try {
   logger = require("../common/libs/logger") || console;
 } catch (e) {
-  console.warn("Logger not found, using console as fallback.");
+  console.warn("Logger not found, using console fallback.");
 }
 
-// Helpers for staffAlias and role checks
+// ---------------------- HELPERS (DEFENSIVE) ----------------------
 let helpers = null;
 try {
   helpers = require("../common/libs/helpers");
 } catch (e) {
   helpers = null;
-  logger &&
-    logger.warn &&
-    logger.warn("helpers not found; staffAlias validation may be skipped.");
+  logger.warn &&
+    logger.warn("helpers not found; staffAlias validation skipped.");
 }
-const ensureStaffAliasValid = helpers
-  ? helpers.ensureStaffAliasValid
-  : async () => true;
-const requestHasRole = helpers ? helpers.requestHasRole : () => true;
 
-// Defensive load for Redis helpers (checkIdempotency, publishEvent, storeIdempotency)
-let checkIdempotency = null;
-let publishEvent = null;
-let storeIdempotency = null;
-(function tryLoadRedisHelpers() {
-  const candidates = [
-    "../db/redis",
-    "../db/redis.helpers",
-    "../db/redisHelper",
-    "../../db/redis",
-    "../../db/redis.helpers",
-  ];
+const ensureStaffAliasValid =
+  helpers?.ensureStaffAliasValid || (async () => true);
 
-  for (const p of candidates) {
-    try {
-      const mod = require(p);
-      if (!mod) continue;
-
-      if (!checkIdempotency) {
-        checkIdempotency =
-          mod.checkIdempotency ||
-          mod.check_idempotency ||
-          (typeof mod === "function" ? mod : null);
-      }
-
-      if (!publishEvent) {
-        publishEvent =
-          mod.publishEvent ||
-          mod.publish ||
-          (typeof mod === "function" ? mod : null);
-      }
-
-      if (!storeIdempotency) {
-        storeIdempotency =
-          mod.storeIdempotency || mod.store_idempotency || null;
-      }
-
-      if (checkIdempotency || publishEvent) break;
-    } catch (err) {
-      // ignore and continue searching
-    }
-  }
-
-  if (!checkIdempotency) {
-    logger &&
-      logger.warn &&
-      logger.warn(
-        "checkIdempotency not found; idempotency checks will be skipped."
-      );
-    checkIdempotency = null;
-  }
-  if (!publishEvent) {
-    logger &&
-      logger.warn &&
-      logger.warn(
-        "publishEvent not found; publish notifications will be no-op."
-      );
-    publishEvent = null;
-  }
-  if (!storeIdempotency) {
-    logger &&
-      logger.warn &&
-      logger.warn(
-        "storeIdempotency not found; idempotency mapping not persisted."
-      );
-    storeIdempotency = null;
-  }
-})();
-
-// Safe wrappers to avoid crashes/unhandled rejections
-async function safeCheckIdempotency(key) {
-  if (typeof checkIdempotency !== "function") return null;
-  try {
-    return await checkIdempotency(key);
-  } catch (err) {
-    logger && logger.error && logger.error("checkIdempotency error:", err);
+// ---------------------- IDEMPOTENCY CACHE ----------------------
+const localIdempotencyCache = new Map();
+function storeLocalIdempotency(key, value, ttlSec = 3600) {
+  localIdempotencyCache.set(key, {
+    value,
+    expires: Date.now() + ttlSec * 1000,
+  });
+  setTimeout(() => localIdempotencyCache.delete(key), ttlSec * 1000);
+}
+function checkLocalIdempotency(key) {
+  const entry = localIdempotencyCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expires) {
+    localIdempotencyCache.delete(key);
     return null;
   }
-}
-async function safeStoreIdempotency(key, value, ttlSec = 24 * 3600) {
-  if (typeof storeIdempotency !== "function") return false;
-  try {
-    return await storeIdempotency(key, value, ttlSec);
-  } catch (err) {
-    logger && logger.error && logger.error("storeIdempotency error:", err);
-    return false;
-  }
+  return entry.value;
 }
 
-function safePublish(channel, message) {
-  if (typeof publishEvent !== "function") return;
-  try {
-    const res = publishEvent(channel, message);
-    if (res && typeof res.then === "function") {
-      res.catch((err) => {
-        logger &&
-          logger.error &&
-          logger.error("publishEvent promise rejected:", err);
-      });
-    }
-  } catch (err) {
-    logger && logger.error && logger.error("publishEvent error:", err);
-  }
-}
-
-// Create new call (public)
+// ===============================================================
+// ✅ CREATE CALL  (PUBLIC / CUSTOMER SIDE)
+// ===============================================================
 async function createCall(req, res, next) {
   try {
     const { rid } = req.params;
-    const { tableId, sessionId, type, staffAlias } = req.body;
+    let { tableId, tableNumber, type, notes, staffAlias } = req.body;
 
-    // Validate required fields
-    if (!tableId || !sessionId || !type) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!type) {
+      return res.status(400).json({ error: "Missing required field: type" });
     }
 
-    // Idempotency header
-    const headerKey =
-      req.headers["x-idempotency-key"] || req.headers["x-idempotency"];
-    const idempotencyKey =
-      headerKey && typeof headerKey === "string"
-        ? `idempotency:call:${rid}:${sessionId}:${headerKey}`
-        : null;
-
-    if (idempotencyKey) {
-      const existing = await safeCheckIdempotency(idempotencyKey);
-      if (existing) {
-        return res
-          .status(409)
-          .json({ error: "Duplicate request", call: existing });
+    // ✅ Resolve tableNumber → tableId if needed
+    if (!tableId && tableNumber) {
+      try {
+        const Table = require("../models/table.model");
+        const query = mongoose.Types.ObjectId.isValid(tableNumber)
+          ? { _id: tableNumber }
+          : { tableNumber };
+        const tableDoc = await Table.findOne({ restaurantId: rid, ...query });
+        if (!tableDoc)
+          return res.status(404).json({ error: "Table not found" });
+        tableId = tableDoc._id.toString();
+      } catch (err) {
+        logger.warn("Could not resolve tableNumber to tableId:", err);
       }
     }
 
+    if (!tableId) {
+      return res
+        .status(400)
+        .json({ error: "Missing required field: tableId or tableNumber" });
+    }
+
+    // Optional: validate staffAlias if sent
     if (staffAlias) {
       const valid = await ensureStaffAliasValid(rid, staffAlias);
       if (!valid) return res.status(400).json({ error: "Invalid staffAlias" });
     }
 
-    // Create call
+    // Step 1️⃣ Fetch active order info
+    let orderInfo = {};
+    try {
+      const Order = require("../models/order.model");
+      const activeOrder = await Order.findOne({
+        restaurantId: rid,
+        tableId,
+        status: { $in: ["active", "placed"] },
+      });
+
+      if (activeOrder) {
+        orderInfo = {
+          orderId: activeOrder._id.toString(),
+          sessionId: activeOrder.sessionId,
+          customerName: activeOrder.customerName,
+          customerContact: activeOrder.customerContact,
+        };
+      }
+    } catch (e) {
+      logger.warn("Order model unavailable or no active order found.");
+    }
+
+    // Step 2️⃣ Fallback if no active order
+    const sessionId =
+      orderInfo.sessionId ||
+      `call-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    // Step 3️⃣ Create and save call
     const call = new Call({
       restaurantId: rid,
       tableId,
       sessionId,
+      orderId: orderInfo.orderId,
       type,
+      notes,
+      customerName: orderInfo.customerName,
+      customerContact: orderInfo.customerContact,
       staffAlias,
     });
 
     await call.save();
-
-    // persist idempotency mapping if available
-    if (idempotencyKey) {
-      try {
-        await safeStoreIdempotency(idempotencyKey, call, 24 * 3600);
-      } catch (e) {
-        // non-fatal
-      }
-    }
-
-    // Publish event (safe no-op if publish unavailable)
-    safePublish(`restaurant:${rid}:staff`, {
-      event: "callCreated",
-      data: call,
-    });
-
     return res.status(201).json(call);
   } catch (error) {
-    logger && logger.error && logger.error("Call creation error:", error);
+    logger.error && logger.error("Call creation error:", error);
     return next(error);
   }
 }
 
-// Resolve call (staff/admin only)
+// ===============================================================
+// ✅ RESOLVE CALL (STAFF / ADMIN)
+// ===============================================================
 async function resolveCall(req, res, next) {
   try {
     const { rid, id } = req.params;
     const { staffAlias } = req.body;
 
-    // require staff/admin role
-    if (!requestHasRole(req, ["staff", "admin"])) {
+    // 🔒 Authorization check
+    const userRole = req.user?.role;
+    if (!["staff", "admin"].includes(userRole)) {
       return res
         .status(403)
         .json({ error: "Forbidden: staff/admin required to resolve call" });
@@ -234,43 +172,66 @@ async function resolveCall(req, res, next) {
         .json({ error: "Call not found or already resolved" });
     }
 
-    // Publish event (safe no-op if publish unavailable)
-    safePublish(`restaurant:${rid}:tables:${call.tableId}`, {
-      event: "callResolved",
-      data: call,
-    });
-
     return res.json(call);
   } catch (error) {
-    logger && logger.error && logger.error("Call resolution error:", error);
+    logger.error && logger.error("Call resolution error:", error);
     return next(error);
   }
 }
 
-// Get active calls for restaurant (staff)
+// ===============================================================
+// ✅ GET ACTIVE CALLS (STAFF / ADMIN)
+// ===============================================================
 async function getActiveCalls(req, res, next) {
   try {
     const { rid } = req.params;
+    const userRole = req.user?.role;
 
-    // Require staff/admin to view active calls if auth present
-    if (!requestHasRole(req, ["staff", "admin"])) {
-      return res.status(403).json({ error: "Forbidden: staff/admin required" });
+    if (!["staff", "admin"].includes(userRole)) {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: staff/admin required to view calls" });
+    }
+
+    const calls = await Call.find({ restaurantId: rid, status: "active" }).sort(
+      { createdAt: -1 }
+    );
+    return res.json(calls);
+  } catch (error) {
+    logger.error && logger.error("Active calls fetch error:", error);
+    return next(error);
+  }
+}
+
+// ===============================================================
+// ✅ GET RESOLVED CALLS (STAFF / ADMIN)
+// ===============================================================
+async function getResolvedCalls(req, res, next) {
+  try {
+    const { rid } = req.params;
+    const userRole = req.user?.role;
+
+    if (!["staff", "admin"].includes(userRole)) {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: staff/admin required to view history" });
     }
 
     const calls = await Call.find({
       restaurantId: rid,
-      status: "active",
-    }).sort({ createdAt: -1 });
-
+      status: "resolved",
+    }).sort({ resolvedAt: -1 });
     return res.json(calls);
   } catch (error) {
-    logger && logger.error && logger.error("Active calls fetch error:", error);
+    logger.error && logger.error("Resolved calls fetch error:", error);
     return next(error);
   }
 }
 
+// ===============================================================
 module.exports = {
   createCall,
   resolveCall,
   getActiveCalls,
+  getResolvedCalls,
 };

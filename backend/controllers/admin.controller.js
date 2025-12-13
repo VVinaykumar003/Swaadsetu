@@ -358,6 +358,11 @@ async function generateOverrideToken(req, res, next) {
     return next(err);
   }
 }
+//========================================================================================================
+//========================================================================================================
+//========================================================================================================
+//========================================================================================================
+// ----------------------- Menu Controllers -----------------------
 
 /**
  * Get Menu (public)
@@ -420,16 +425,18 @@ async function getMenu(req, res, next) {
   }
 }
 
-/**
+/*/**
  * Update Menu (admin protected)
  * POST /api/:rid/admin/menu
  *
+ * Supports normal menu + combo categories.
  * Writes to Menu collection only. Admin document is ensured to exist (no menu copy).
  */
 async function updateMenu(req, res, next) {
   logger &&
     logger.info &&
     logger.info("Enter updateMenu", { params: req.params });
+
   try {
     const { rid } = req.params;
     const incoming = req.body || {};
@@ -443,12 +450,38 @@ async function updateMenu(req, res, next) {
       logger.debug &&
       logger.debug("updateMenu incoming body keys", Object.keys(incoming));
 
-    // Prepare update fields (only set provided)
+    // ------------------------------
+    // Normalize incoming data
+    // ------------------------------
     const updateFields = {};
-    if (typeof incoming.menu !== "undefined")
+
+    if (typeof incoming.menu !== "undefined") {
       updateFields.items = incoming.menu;
-    if (typeof incoming.categories !== "undefined")
-      updateFields.categories = incoming.categories;
+    }
+
+    if (typeof incoming.categories !== "undefined") {
+      // Normalize each category — now supports comboMeta
+      updateFields.categories = incoming.categories.map((cat) => {
+        const comboMeta = cat.comboMeta || {};
+        const originalPrice = Number(comboMeta.originalPrice || 0);
+        const discountedPrice = Number(comboMeta.discountedPrice || 0);
+        const saveAmount = Math.max(originalPrice - discountedPrice, 0);
+
+        return {
+          name: cat.name,
+          itemIds: Array.isArray(cat.itemIds) ? cat.itemIds : [],
+          isMenuCombo: !!cat.isMenuCombo,
+          comboMeta: {
+            originalPrice,
+            discountedPrice,
+            saveAmount,
+            description: comboMeta.description || "",
+            image: comboMeta.image || null,
+          },
+        };
+      });
+    }
+
     if (typeof incoming.taxes !== "undefined")
       updateFields.taxes = incoming.taxes;
     if (typeof incoming.serviceCharge !== "undefined")
@@ -463,41 +496,50 @@ async function updateMenu(req, res, next) {
         Object.keys(updateFields)
       );
 
+    // ------------------------------
+    // Create or Update Menu
+    // ------------------------------
     let menuResult = null;
+
     if (Menu) {
-      // try to find active menu for this restaurant
       logger &&
         logger.debug &&
         logger.debug("updateMenu searching for existing active menu", {
           restaurantId: rid,
         });
+
       let menuDoc = await Menu.findOne({ restaurantId: rid, isActive: true });
+
       if (menuDoc) {
+        // ✅ UPDATE EXISTING MENU
         logger &&
           logger.info &&
           logger.info("updateMenu found active menu, applying updates", {
             menuId: menuDoc._id,
           });
-        // apply only provided fields
+
         Object.assign(menuDoc, updateFields);
         menuDoc.updatedAt = Date.now();
         menuResult = await menuDoc.save();
+
         logger &&
           logger.info &&
           logger.info("updateMenu saved updated menu", {
             menuId: menuResult._id,
           });
       } else {
+        // 🆕 CREATE NEW MENU VERSION
         logger &&
           logger.info &&
           logger.info("updateMenu no active menu found, creating new menu", {
             restaurantId: rid,
           });
-        // create new active menu; pick version = highest+1 or 1
+
         const last = await Menu.findOne({ restaurantId: rid })
           .sort({ version: -1 })
           .lean();
         const version = last && last.version ? last.version + 1 : 1;
+
         const newDoc = {
           restaurantId: rid,
           version,
@@ -514,7 +556,9 @@ async function updateMenu(req, res, next) {
           createdAt: new Date(),
           updatedAt: new Date(),
         };
+
         menuResult = await Menu.create(newDoc);
+
         logger &&
           logger.info &&
           logger.info("updateMenu created new menu", {
@@ -523,21 +567,23 @@ async function updateMenu(req, res, next) {
           });
       }
     } else {
-      // Menu model not available - cannot update menu collection
       logger &&
         logger.warn &&
-        logger.warn("updateMenu failed: Menu collection not available");
+        logger.warn("updateMenu failed: Menu model not available");
       return res
         .status(501)
         .json({ error: "Menu collection not available on server." });
     }
 
-    // Ensure Admin exists minimally (do not copy menu into Admin)
+    // ------------------------------
+    // Ensure Admin Document Exists
+    // ------------------------------
     logger &&
       logger.debug &&
       logger.debug("updateMenu ensuring admin exists for restaurant", {
         restaurantId: rid,
       });
+
     await Admin.updateOne(
       { restaurantId: rid },
       {
@@ -547,16 +593,23 @@ async function updateMenu(req, res, next) {
       { upsert: true }
     );
 
+    // ------------------------------
+    // Publish Realtime Update Event
+    // ------------------------------
     safePublish(`restaurant:${rid}:staff`, {
       event: "menuUpdated",
       data: { timestamp: new Date() },
     });
 
+    // ------------------------------
+    // Respond to Client
+    // ------------------------------
     logger &&
       logger.info &&
       logger.info("updateMenu returning updated menu to client", {
         restaurantId: rid,
       });
+
     return res.json({
       menu: menuResult.items || [],
       categories: menuResult.categories || [],
@@ -582,49 +635,34 @@ async function updateMenu(req, res, next) {
  * POST /api/:rid/admin/menu/items
  */
 async function addMenuItem(req, res, next) {
-  logger &&
-    logger.info &&
-    logger.info("Enter addMenuItem", { params: req.params });
+  logger?.info?.("Enter addMenuItem", { params: req.params });
   try {
     const { rid } = req.params;
     const { item } = req.body || {};
-    if (!rid) {
-      logger && logger.warn && logger.warn("addMenuItem missing rid");
-      return res.status(400).json({ error: "Missing restaurant id (rid)" });
-    }
-    if (!item || typeof item !== "object") {
-      logger &&
-        logger.warn &&
-        logger.warn("addMenuItem missing or invalid item");
-      return res.status(400).json({ error: "Valid menu item required" });
-    }
 
-    // minimal validation
-    if (!item.name || typeof item.name !== "string") {
-      logger && logger.warn && logger.warn("addMenuItem missing item.name");
+    if (!rid)
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    if (!item || typeof item !== "object")
+      return res.status(400).json({ error: "Valid menu item required" });
+    if (!item.name || typeof item.name !== "string")
       return res.status(400).json({ error: "Item name required" });
-    }
-    if (typeof item.price !== "number") {
-      logger &&
-        logger.warn &&
-        logger.warn("addMenuItem missing item.price or invalid type");
+    if (typeof item.price !== "number")
       return res.status(400).json({ error: "Item price required (number)" });
-    }
+
     const categoryName =
-      item.category && typeof item.category === "string"
+      typeof item.category === "string" && item.category.trim() !== ""
         ? item.category
         : "Uncategorized";
 
-    // generate itemId — CORRECT: construct ObjectId with `new`
-    // use toHexString() to get the canonical 24-char hex string
+    // Stable business id
     const itemId =
-      item.itemId && typeof item.itemId === "string"
+      typeof item.itemId === "string"
         ? item.itemId
         : `i_${new mongoose.Types.ObjectId().toHexString()}`;
 
     const newItem = {
       itemId,
-      name: item.name,
+      name: item.name.trim(),
       description: item.description || "",
       price: item.price,
       currency: item.currency || "INR",
@@ -636,212 +674,93 @@ async function addMenuItem(req, res, next) {
       metadata: item.metadata || {},
     };
 
-    logger &&
-      logger.debug &&
-      logger.debug("addMenuItem prepared newItem (redacted)", {
-        restaurantId: rid,
-        itemId,
-        name: newItem.name,
-      });
+    logger?.debug?.("addMenuItem prepared", {
+      rid,
+      itemId,
+      name: newItem.name,
+    });
 
-    // Prepare a safe upsert update object (no updatedAt in $setOnInsert to avoid conflicts)
+    // Ensure single source of truth menu (no duplicate)
     const upsertUpdate = {
       $setOnInsert: {
         restaurantId: rid,
         version: 1,
         title: `${rid} menu`,
+        isActive: true, // ✅ ensure new ones are active
         createdAt: new Date(),
       },
       $push: { items: newItem },
+      $set: { updatedAt: new Date() },
     };
 
-    // If Menu model exists, perform updates (transaction when possible; fallback otherwise)
-    if (Menu) {
-      let session = null;
-      try {
-        // Try to start a session (some drivers allow session even on standalone)
-        session = await mongoose.startSession();
-        logger &&
-          logger.debug &&
-          logger.debug("addMenuItem attempting transaction session", {
-            restaurantId: rid,
-          });
+    if (!Menu)
+      return res.status(501).json({ error: "Menu collection not available" });
 
-        try {
-          session.startTransaction();
+    let menuDoc = null;
+    try {
+      const session = await mongoose.startSession();
+      await session.withTransaction(async () => {
+        menuDoc = await Menu.findOneAndUpdate(
+          { restaurantId: rid }, // ✅ no isActive constraint
+          upsertUpdate,
+          { new: true, upsert: true, session }
+        );
 
-          // Use upsertUpdate + session
-          const menuDoc = await Menu.findOneAndUpdate(
-            { restaurantId: rid, isActive: true },
-            upsertUpdate,
-            { new: true, upsert: true, session }
-          );
+        // Ensure category exists or update it
+        await Menu.updateOne(
+          { _id: menuDoc._id, "categories.name": { $ne: categoryName } },
+          { $push: { categories: { name: categoryName, itemIds: [itemId] } } },
+          { session }
+        );
 
-          if (!menuDoc)
-            throw new Error("Failed to upsert or retrieve menu document");
-
-          await Menu.updateOne(
-            { _id: menuDoc._id, "categories.name": { $ne: categoryName } },
-            {
-              $push: { categories: { name: categoryName, itemIds: [itemId] } },
-            },
-            { session }
-          );
-
-          await Menu.updateOne(
-            {
-              _id: menuDoc._id,
-              "categories.name": categoryName,
-              "categories.itemIds": { $ne: itemId },
-            },
-            { $push: { "categories.$.itemIds": itemId } },
-            { session }
-          );
-
-          await session.commitTransaction();
-          session.endSession();
-          logger &&
-            logger.info &&
-            logger.info("addMenuItem transaction committed", {
-              restaurantId: rid,
-              itemId,
-            });
-        } catch (txErr) {
-          // Detect unsupported-transaction error and fall back to sequential updates
-          const msg = txErr && txErr.message ? txErr.message : "";
-          if (
-            msg.includes("Transaction numbers are only allowed") ||
-            msg.includes("transactions are not supported") ||
-            msg.includes("not a replica set")
-          ) {
-            logger &&
-              logger.warn &&
-              logger.warn(
-                "Transactions not supported by MongoDB server; falling back to non-transactional updates",
-                { restaurantId: rid, error: msg }
-              );
-
-            // cleanup attempted transaction/session
-            try {
-              await session.abortTransaction();
-            } catch (e) {
-              /* ignore */
-            }
-            try {
-              session.endSession();
-            } catch (e) {
-              /* ignore */
-            }
-
-            // Non-transactional fallback: sequential best-effort updates
-            const menuDoc = await Menu.findOneAndUpdate(
-              { restaurantId: rid, isActive: true },
-              upsertUpdate,
-              { new: true, upsert: true }
-            );
-
-            if (!menuDoc)
-              throw new Error(
-                "Failed to upsert or retrieve menu document (fallback)"
-              );
-
-            // Ensure category exists or push itemId into category
-            await Menu.updateOne(
-              { _id: menuDoc._id, "categories.name": { $ne: categoryName } },
-              {
-                $push: {
-                  categories: { name: categoryName, itemIds: [itemId] },
-                },
-              }
-            );
-            await Menu.updateOne(
-              {
-                _id: menuDoc._id,
-                "categories.name": categoryName,
-                "categories.itemIds": { $ne: itemId },
-              },
-              { $push: { "categories.$.itemIds": itemId } }
-            );
-
-            logger &&
-              logger.info &&
-              logger.info("addMenuItem fallback sequential updates completed", {
-                restaurantId: rid,
-                itemId,
-              });
-          } else {
-            // Some other transaction error - rethrow
-            throw txErr;
-          }
+        await Menu.updateOne(
+          {
+            _id: menuDoc._id,
+            "categories.name": categoryName,
+            "categories.itemIds": { $ne: itemId },
+          },
+          { $push: { "categories.$.itemIds": itemId } },
+          { session }
+        );
+      });
+      session.endSession();
+    } catch (err) {
+      logger?.warn?.(
+        "Transaction failed, fallback to non-transactional upsert",
+        {
+          restaurantId: rid,
+          error: err.message,
         }
-      } catch (outerErr) {
-        // If session couldn't be started at all (older drivers or other errors), fallback directly
-        const msg = outerErr && outerErr.message ? outerErr.message : "";
-        if (
-          msg.includes("Transaction numbers are only allowed") ||
-          msg.includes("transactions are not supported") ||
-          msg.includes("not a replica set")
-        ) {
-          logger &&
-            logger.warn &&
-            logger.warn(
-              "Transactions not supported by MongoDB server (startSession failed); using fallback sequential updates",
-              { restaurantId: rid, error: msg }
-            );
+      );
 
-          // Non-transactional fallback
-          const menuDoc = await Menu.findOneAndUpdate(
-            { restaurantId: rid, isActive: true },
-            upsertUpdate,
-            { new: true, upsert: true }
-          );
+      menuDoc = await Menu.findOneAndUpdate(
+        { restaurantId: rid },
+        upsertUpdate,
+        { new: true, upsert: true }
+      );
 
-          if (!menuDoc)
-            throw new Error(
-              "Failed to upsert or retrieve menu document (fallback outer)"
-            );
+      await Menu.updateOne(
+        { _id: menuDoc._id, "categories.name": { $ne: categoryName } },
+        { $push: { categories: { name: categoryName, itemIds: [itemId] } } }
+      );
 
-          await Menu.updateOne(
-            { _id: menuDoc._id, "categories.name": { $ne: categoryName } },
-            { $push: { categories: { name: categoryName, itemIds: [itemId] } } }
-          );
-          await Menu.updateOne(
-            {
-              _id: menuDoc._id,
-              "categories.name": categoryName,
-              "categories.itemIds": { $ne: itemId },
-            },
-            { $push: { "categories.$.itemIds": itemId } }
-          );
-
-          logger &&
-            logger.info &&
-            logger.info(
-              "addMenuItem fallback sequential updates completed (outer)",
-              {
-                restaurantId: rid,
-                itemId,
-              }
-            );
-        } else {
-          // Unexpected error - bubble up
-          throw outerErr;
-        }
-      }
-    } else {
-      // Cannot add menu item without Menu collection
-      logger &&
-        logger.warn &&
-        logger.warn("addMenuItem failed: Menu collection not available");
-      return res
-        .status(501)
-        .json({ error: "Menu collection not available on server." });
+      await Menu.updateOne(
+        {
+          _id: menuDoc._id,
+          "categories.name": categoryName,
+          "categories.itemIds": { $ne: itemId },
+        },
+        { $push: { "categories.$.itemIds": itemId } }
+      );
     }
 
-    // Ensure Admin exists minimally (do not store menu)
-    logger &&
-      logger.debug &&
-      logger.debug("addMenuItem ensuring admin exists", { restaurantId: rid });
+    // Guarantee only one menu per restaurant
+    await Menu.updateMany(
+      { restaurantId: rid, _id: { $ne: menuDoc._id } },
+      { $set: { isActive: false } }
+    );
+
+    // Ensure Admin record
     await Admin.updateOne(
       { restaurantId: rid },
       {
@@ -861,12 +780,8 @@ async function addMenuItem(req, res, next) {
       },
     });
 
-    logger &&
-      logger.info &&
-      logger.info("addMenuItem completed successfully", {
-        restaurantId: rid,
-        itemId,
-      });
+    logger?.info?.("addMenuItem completed successfully", { rid, itemId });
+
     return res.status(201).json({
       item: {
         itemId: newItem.itemId,
@@ -880,83 +795,309 @@ async function addMenuItem(req, res, next) {
       },
     });
   } catch (err) {
-    logger &&
-      logger.error &&
-      logger.error("Add menu item error:", err && err.stack ? err.stack : err);
+    logger?.error?.("Add menu item error", err);
     return next(err);
   }
 }
 
 /**
- * Update global config (taxPercent, globalDiscountPercent, serviceCharge)
- * PATCH /api/:rid/admin/config
- *
- * Stores values under admin.settings to keep a single config location.
+ * Update a specific menu item
+ * PATCH /api/:rid/admin/menu/items/:itemId
  */
-async function updateConfig(req, res, next) {
+async function updateMenuItem(req, res, next) {
   logger &&
     logger.info &&
-    logger.info("Enter updateConfig", { params: req.params });
+    logger.info("Enter updateMenuItem", { params: req.params });
   try {
-    const { rid } = req.params;
-    const { taxPercent, globalDiscountPercent, serviceCharge } = req.body || {};
+    const { rid, itemId } = req.params;
+    const updates = req.body || {};
 
-    if (!rid) {
-      logger && logger.warn && logger.warn("updateConfig missing rid");
-      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    if (!rid || !itemId) {
+      return res.status(400).json({ error: "Missing restaurant id or itemId" });
     }
-
-    const settings = {};
-    if (typeof taxPercent !== "undefined") {
-      settings.taxPercent = Number(taxPercent);
-    }
-    if (typeof globalDiscountPercent !== "undefined") {
-      settings.globalDiscountPercent = Number(globalDiscountPercent);
-    }
-    if (typeof serviceCharge !== "undefined") {
-      settings.serviceCharge = Number(serviceCharge);
+    if (!Menu) {
+      return res.status(501).json({ error: "Menu collection not available" });
     }
 
-    if (Object.keys(settings).length === 0) {
-      logger &&
-        logger.warn &&
-        logger.warn("updateConfig no config fields provided");
-      return res.status(400).json({ error: "No config fields provided" });
-    }
+    const menu = await Menu.findOne({ restaurantId: rid, isActive: true });
+    if (!menu) return res.status(404).json({ error: "Menu not found" });
 
-    logger &&
-      logger.debug &&
-      logger.debug("updateConfig persisting settings", {
-        restaurantId: rid,
-        settings,
-      });
-    // Persist settings under admin.settings using updateOne (safe even if schema doesn't define it)
-    const upd = {
-      $setOnInsert: { restaurantId: rid, hashedPin: "" },
-      $set: { updatedAt: Date.now(), settings },
-    };
-    await Admin.updateOne({ restaurantId: rid }, upd, { upsert: true });
+    const item = menu.items.find((i) => i.itemId === itemId);
+    if (!item) return res.status(404).json({ error: "Item not found" });
+
+    Object.assign(item, updates);
+    menu.updatedAt = new Date();
+
+    await menu.save();
 
     safePublish(`restaurant:${rid}:staff`, {
-      event: "configUpdated",
-      data: { settings },
+      event: "menuItemUpdated",
+      data: { itemId, updates },
     });
 
-    const admin = await Admin.findOne({ restaurantId: rid }).lean();
     logger &&
       logger.info &&
-      logger.info("updateConfig returning sanitized admin", {
-        restaurantId: rid,
-      });
-    return res.json(sanitizeAdmin(admin));
+      logger.info("updateMenuItem success", { restaurantId: rid, itemId });
+    return res.json({ success: true, item });
   } catch (err) {
-    logger &&
-      logger.error &&
-      logger.error("Update config error:", err && err.stack ? err.stack : err);
+    logger && logger.error && logger.error("updateMenuItem error:", err);
     return next(err);
   }
 }
 
+/**
+ * Delete (or disable) a specific menu item
+ * DELETE /api/:rid/admin/menu/items/:itemId
+ */
+async function deleteMenuItem(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter deleteMenuItem", { params: req.params });
+  try {
+    const { rid, itemId } = req.params;
+    if (!rid || !itemId)
+      return res.status(400).json({ error: "Missing restaurant id or itemId" });
+
+    const menu = await Menu.findOne({ restaurantId: rid, isActive: true });
+    if (!menu) return res.status(404).json({ error: "Menu not found" });
+
+    const item = menu.items.find((i) => i.itemId === itemId);
+    if (!item) return res.status(404).json({ error: "Item not found" });
+
+    item.isActive = false;
+    menu.updatedAt = new Date();
+    await menu.save();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "menuItemDeleted",
+      data: { itemId },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("deleteMenuItem success", { restaurantId: rid, itemId });
+    return res.json({ success: true });
+  } catch (err) {
+    logger && logger.error && logger.error("deleteMenuItem error:", err);
+    return next(err);
+  }
+}
+/**
+ * Restore (re-enable) a soft-deleted item
+ * PATCH /api/:rid/admin/menu/items/:itemId/restore
+ */
+async function restoreMenuItem(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter restoreMenuItem", { params: req.params });
+
+  try {
+    const { rid, itemId } = req.params;
+
+    if (!rid || !itemId) {
+      logger && logger.warn && logger.warn("restoreMenuItem missing params");
+      return res
+        .status(400)
+        .json({ error: "Missing restaurant id (rid) or item id" });
+    }
+
+    // find menu
+    const menuDoc = await Menu.findOne({ restaurantId: rid, isActive: true });
+    if (!menuDoc) {
+      logger &&
+        logger.warn &&
+        logger.warn("restoreMenuItem no menu found", { rid });
+      return res.status(404).json({ error: "Menu not found for restaurant" });
+    }
+
+    // find item
+    const itemIndex = menuDoc.items.findIndex((i) => i.itemId === itemId);
+    if (itemIndex === -1) {
+      logger &&
+        logger.warn &&
+        logger.warn("restoreMenuItem item not found", { rid, itemId });
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    // already active?
+    if (menuDoc.items[itemIndex].isActive) {
+      return res.status(200).json({
+        success: true,
+        message: `Item ${itemId} is already active.`,
+      });
+    }
+
+    // ✅ Restore the item
+    menuDoc.items[itemIndex].isActive = true;
+    menuDoc.updatedAt = new Date();
+
+    await menuDoc.save();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "menuItemRestored",
+      data: {
+        itemId,
+        name: menuDoc.items[itemIndex].name,
+        timestamp: new Date(),
+      },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("restoreMenuItem successful", { rid, itemId });
+
+    return res.status(200).json({
+      success: true,
+      message: `Item ${itemId} restored and available again.`,
+      item: {
+        itemId: menuDoc.items[itemIndex].itemId,
+        name: menuDoc.items[itemIndex].name,
+        isActive: true,
+      },
+    });
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error(
+        "restoreMenuItem error:",
+        err && err.stack ? err.stack : err
+      );
+    return next(err);
+  }
+}
+
+/**
+ * Update a category
+ * PATCH /api/:rid/admin/menu/categories/:categoryId
+ */
+async function updateCategory(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter updateCategory", { params: req.params });
+  try {
+    const { rid, categoryId } = req.params;
+    const updates = req.body || {};
+
+    if (!rid || !categoryId)
+      return res
+        .status(400)
+        .json({ error: "Missing restaurant id or categoryId" });
+
+    const menu = await Menu.findOne({ restaurantId: rid, isActive: true });
+    if (!menu) return res.status(404).json({ error: "Menu not found" });
+
+    const cat =
+      menu.categories.id(categoryId) ||
+      menu.categories.find((c) => c._id?.toString() === categoryId);
+
+    if (!cat) return res.status(404).json({ error: "Category not found" });
+
+    Object.assign(cat, updates);
+    menu.updatedAt = new Date();
+    await menu.save();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "menuCategoryUpdated",
+      data: { categoryId, updates },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("updateCategory success", { restaurantId: rid, categoryId });
+    return res.json({ success: true, category: cat });
+  } catch (err) {
+    logger && logger.error && logger.error("updateCategory error:", err);
+    return next(err);
+  }
+}
+
+/** 
+ * Delete a category
+ * DELETE /api/:rid/admin/menu/categories/:categoryId
+ */
+async function deleteCategory(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter deleteCategory", { params: req.params });
+  try {
+    const { rid, categoryId } = req.params;
+    if (!rid || !categoryId)
+      return res
+        .status(400)
+        .json({ error: "Missing restaurant id or categoryId" });
+
+    const menu = await Menu.findOne({ restaurantId: rid, isActive: true });
+    if (!menu) return res.status(404).json({ error: "Menu not found" });
+
+    const initialCount = menu.categories.length;
+    menu.categories = menu.categories.filter(
+      (c) => c._id?.toString() !== categoryId
+    );
+
+    if (menu.categories.length === initialCount)
+      return res.status(404).json({ error: "Category not found" });
+
+    menu.updatedAt = new Date();
+    await menu.save();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "menuCategoryDeleted",
+      data: { categoryId },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("deleteCategory success", { restaurantId: rid, categoryId });
+    return res.json({ success: true });
+  } catch (err) {
+    logger && logger.error && logger.error("deleteCategory error:", err);
+    return next(err);
+  }
+}
+
+/**
+ * Get all categories for a restaurant
+ * GET /api/:rid/admin/menu/categories
+ */
+async function getAllCategories(req, res, next) {
+  const { rid } = req.params;
+
+  try {
+    if (!rid) {
+      return res.status(400).json({ error: "Missing restaurant ID (rid)" });
+    }
+
+    const menuDoc = await Menu.findOne(
+      { restaurantId: rid, isActive: true },
+      { categories: 1, _id: 0 }
+    );
+
+    if (!menuDoc || !menuDoc.categories) {
+      return res.status(404).json({ error: "No categories found" });
+    }
+
+    // Clean minimal payload
+    const categories = menuDoc.categories.map((cat) => ({
+      name: cat.name,
+      itemCount: Array.isArray(cat.itemIds) ? cat.itemIds.length : 0,
+      isMenuCombo: !!cat.isMenuCombo,
+      comboMeta: cat.comboMeta || {},
+      _id:cat._id
+    }));
+     console.log(categories)
+    return res.status(200).json({ categories });
+  } catch (err) {
+    console.error("❌ getAllCategories error:", err);
+    next(err);
+  }
+}
+
+//========================================================================================================
+//========================================================================================================
+//========================================================================================================
+//========================================================================================================
+
+// ----------------------- Analytics & Reports Controllers -----------------------
 /**
  * Analytics (keeps your previous logic)
  * GET /api/:rid/admin/analytics?period=daily|weekly|monthly
@@ -1488,19 +1629,667 @@ async function reopenBill(req, res, next) {
     return next(err);
   }
 }
+//======================================================================================================\
+//Waiter Names Addition
+/**
+ * Add a waiter name
+ * POST /api/:rid/admin/waiters
+ * body: { name: "Ramesh" }
+ */
+async function addWaiterName(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter addWaiterName", { params: req.params });
+  try {
+    const { rid } = req.params;
+    const { name } = req.body || {};
 
+    if (!rid) {
+      logger && logger.warn && logger.warn("addWaiterName missing rid");
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    }
+    if (!name || typeof name !== "string") {
+      logger &&
+        logger.warn &&
+        logger.warn("addWaiterName missing or invalid name");
+      return res.status(400).json({ error: "Waiter name required" });
+    }
+
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return res.status(400).json({ error: "Waiter name cannot be empty" });
+    }
+
+    // Ensure admin exists; use upsert to create minimal admin doc if needed
+    logger &&
+      logger.debug &&
+      logger.debug("addWaiterName upserting admin", { restaurantId: rid });
+    const update = {
+      $addToSet: { waiterNames: trimmed },
+      $setOnInsert: { restaurantId: rid, hashedPin: "" },
+      $set: { updatedAt: Date.now() },
+    };
+
+    const admin = await Admin.findOneAndUpdate({ restaurantId: rid }, update, {
+      new: true,
+      upsert: true,
+    }).lean();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "waiterAdded",
+      data: { name: trimmed, createdAt: new Date() },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("addWaiterName completed", {
+        restaurantId: rid,
+        name: trimmed,
+      });
+    return res.status(201).json(sanitizeAdmin(admin));
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error("addWaiterName error:", err && err.stack ? err.stack : err);
+    return next(err);
+  }
+}
+
+/**
+ * Update (rename) a waiter name
+ * PATCH /api/:rid/admin/waiters
+ * body: { oldName: "Ramesh", newName: "Ramu" }
+ */
+async function updateWaiterName(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter updateWaiterName", {
+      params: req.params,
+      body: req.body,
+    });
+  try {
+    const { rid } = req.params;
+    const { oldName, newName } = req.body || {};
+
+    if (!rid) {
+      logger && logger.warn && logger.warn("updateWaiterName missing rid");
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    }
+    if (
+      !oldName ||
+      typeof oldName !== "string" ||
+      !newName ||
+      typeof newName !== "string"
+    ) {
+      logger &&
+        logger.warn &&
+        logger.warn("updateWaiterName missing oldName or newName");
+      return res
+        .status(400)
+        .json({ error: "oldName and newName are required" });
+    }
+
+    const oldTrim = oldName.trim();
+    const newTrim = newName.trim();
+    if (!oldTrim || !newTrim) {
+      return res.status(400).json({ error: "Names cannot be empty" });
+    }
+    if (oldTrim === newTrim) {
+      return res
+        .status(400)
+        .json({ error: "oldName and newName must be different" });
+    }
+
+    // Load admin
+    logger &&
+      logger.debug &&
+      logger.debug("updateWaiterName finding admin", { restaurantId: rid });
+    let admin = await Admin.findOne({ restaurantId: rid });
+    if (!admin) {
+      logger &&
+        logger.warn &&
+        logger.warn("updateWaiterName admin not found", { restaurantId: rid });
+      return res.status(404).json({ error: "Admin configuration not found" });
+    }
+
+    // Ensure waiterNames exists
+    admin.waiterNames = admin.waiterNames || [];
+
+    const idx = admin.waiterNames.findIndex(
+      (n) => (n || "").trim() === oldTrim
+    );
+    if (idx === -1) {
+      logger &&
+        logger.warn &&
+        logger.warn("updateWaiterName oldName not found", {
+          restaurantId: rid,
+          oldName: oldTrim,
+        });
+      return res.status(404).json({ error: "Waiter name not found" });
+    }
+
+    // Prevent duplicate of new name
+    const already = admin.waiterNames.some((n) => (n || "").trim() === newTrim);
+    if (already) {
+      logger &&
+        logger.warn &&
+        logger.warn("updateWaiterName newName already exists", {
+          restaurantId: rid,
+          newName: newTrim,
+        });
+      return res.status(409).json({ error: "New waiter name already exists" });
+    }
+
+    admin.waiterNames[idx] = newTrim;
+    admin.updatedAt = Date.now();
+    await admin.save();
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "waiterRenamed",
+      data: { oldName: oldTrim, newName: newTrim, at: new Date() },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("updateWaiterName completed", {
+        restaurantId: rid,
+        oldName: oldTrim,
+        newName: newTrim,
+      });
+    return res.json(sanitizeAdmin(admin));
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error(
+        "updateWaiterName error:",
+        err && err.stack ? err.stack : err
+      );
+    return next(err);
+  }
+}
+
+/**
+ * Delete a waiter name
+ * DELETE /api/:rid/admin/waiters
+ * body: { name: "Ramesh" }
+ *
+ * (Alternatively you can send name as query param; body is used here.)
+ */
+async function deleteWaiterName(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter deleteWaiterName", {
+      params: req.params,
+      body: req.body,
+    });
+  try {
+    const { rid } = req.params;
+    const { name } = req.body || {};
+
+    if (!rid) {
+      logger && logger.warn && logger.warn("deleteWaiterName missing rid");
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    }
+    if (!name || typeof name !== "string") {
+      logger &&
+        logger.warn &&
+        logger.warn("deleteWaiterName missing or invalid name");
+      return res.status(400).json({ error: "Waiter name required" });
+    }
+
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return res.status(400).json({ error: "Waiter name cannot be empty" });
+    }
+
+    // Pull the name from array
+    logger &&
+      logger.debug &&
+      logger.debug("deleteWaiterName pulling name", {
+        restaurantId: rid,
+        name: trimmed,
+      });
+    const result = await Admin.findOneAndUpdate(
+      { restaurantId: rid },
+      { $pull: { waiterNames: trimmed }, $set: { updatedAt: Date.now() } },
+      { new: true }
+    ).lean();
+
+    if (!result) {
+      logger &&
+        logger.warn &&
+        logger.warn("deleteWaiterName admin not found", { restaurantId: rid });
+      return res.status(404).json({ error: "Admin configuration not found" });
+    }
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "waiterRemoved",
+      data: { name: trimmed, removedAt: new Date() },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("deleteWaiterName completed", {
+        restaurantId: rid,
+        name: trimmed,
+      });
+    return res.json(sanitizeAdmin(result));
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error(
+        "deleteWaiterName error:",
+        err && err.stack ? err.stack : err
+      );
+    return next(err);
+  }
+}
+//=====================================================================================================
+// Admin Pricing Controller — with integrated Offers (Promo Code) Support
+//=====================================================================================================
+// ----------------------- Config Controllers -----------------------
+
+/**
+ * Update global config (taxPercent, globalDiscountPercent, serviceCharge)
+ * PATCH /api/:rid/admin/config
+ *
+ * Stores values under admin.settings to keep a single config location.
+ */
+async function updateConfig(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter updateConfig", { params: req.params });
+  try {
+    const { rid } = req.params;
+    const { taxPercent, globalDiscountPercent, serviceCharge } = req.body || {};
+
+    if (!rid) {
+      logger && logger.warn && logger.warn("updateConfig missing rid");
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    }
+
+    const settings = {};
+    if (typeof taxPercent !== "undefined") {
+      settings.taxPercent = Number(taxPercent);
+    }
+    if (typeof globalDiscountPercent !== "undefined") {
+      settings.globalDiscountPercent = Number(globalDiscountPercent);
+    }
+    if (typeof serviceCharge !== "undefined") {
+      settings.serviceCharge = Number(serviceCharge);
+    }
+
+    if (Object.keys(settings).length === 0) {
+      logger &&
+        logger.warn &&
+        logger.warn("updateConfig no config fields provided");
+      return res.status(400).json({ error: "No config fields provided" });
+    }
+
+    logger &&
+      logger.debug &&
+      logger.debug("updateConfig persisting settings", {
+        restaurantId: rid,
+        settings,
+      });
+    // Persist settings under admin.settings using updateOne (safe even if schema doesn't define it)
+    const upd = {
+      $setOnInsert: { restaurantId: rid, hashedPin: "" },
+      $set: { updatedAt: Date.now(), settings },
+    };
+    await Admin.updateOne({ restaurantId: rid }, upd, { upsert: true });
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "configUpdated",
+      data: { settings },
+    });
+
+    const admin = await Admin.findOne({ restaurantId: rid }).lean();
+    logger &&
+      logger.info &&
+      logger.info("updateConfig returning sanitized admin", {
+        restaurantId: rid,
+      });
+    return res.json(sanitizeAdmin(admin));
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error("Update config error:", err && err.stack ? err.stack : err);
+    return next(err);
+  }
+}
+/**
+ * Get pricing configs (active + history)
+ * GET /api/:rid/admin/pricing
+ */
+async function getPricingConfigs(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter getPricingConfigs", { params: req.params });
+
+  try {
+    const { rid } = req.params;
+    if (!rid) {
+      logger && logger.warn && logger.warn("getPricingConfigs missing rid");
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    }
+
+    const admin = await Admin.findOne({ restaurantId: rid }).lean();
+    if (!admin) {
+      logger &&
+        logger.warn &&
+        logger.warn("getPricingConfigs admin not found", { restaurantId: rid });
+      return res.status(404).json({ error: "Admin configuration not found" });
+    }
+
+    // Normalize pricing configs and determine active
+    const pricingConfigs = Array.isArray(admin.pricingConfigs)
+      ? admin.pricingConfigs
+      : [];
+
+    const active = pricingConfigs.find((c) => !!c.active) || null;
+
+    logger &&
+      logger.debug &&
+      logger.debug("getPricingConfigs returning configs", {
+        restaurantId: rid,
+        count: pricingConfigs.length,
+        activeVersion: active ? active.version : null,
+      });
+
+    // Include active offers directly for frontend ease
+    const activeOffers =
+      active && Array.isArray(active.offers)
+        ? active.offers.filter((o) => o.isActive)
+        : [];
+
+    return res.json({
+      active,
+      history: pricingConfigs,
+      offers: activeOffers,
+    });
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error(
+        "Get pricing configs error:",
+        err && err.stack ? err.stack : err
+      );
+    return next(err);
+  }
+}
+
+//=====================================================================================================
+/**
+ * Create a new pricing config (admin-only)
+ * POST /api/:rid/admin/pricing
+ *
+ * Example Body:
+ * {
+ *   "taxes": [{ "name": "GST", "percent": 5 }],
+ *   "globalDiscountPercent": 10,
+ *   "serviceChargePercent": 5,
+ *   "createdBy": "manager",
+ *   "reason": "Diwali promo",
+ *   "activate": true,
+ *   "offers": [
+ *     {
+ *       "code": "FIRST20",
+ *       "title": "Welcome Offer",
+ *       "description": "20% off on first order",
+ *       "discountType": "percent",
+ *       "discountValue": 20,
+ *       "minOrderValue": 300,
+ *       "maxDiscountValue": 100,
+ *       "validFrom": "2025-10-15T00:00:00Z",
+ *       "validTill": "2025-12-31T23:59:59Z"
+ *     }
+ *   ]
+ * }
+ */
+async function createPricingConfig(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter createPricingConfig", {
+      params: req.params,
+      bodyKeys: Object.keys(req.body || {}),
+    });
+
+  try {
+    const { rid } = req.params;
+    const body = req.body || {};
+
+    if (!rid) {
+      logger && logger.warn && logger.warn("createPricingConfig missing rid");
+      return res.status(400).json({ error: "Missing restaurant id (rid)" });
+    }
+
+    // -------------------------
+    // Normalize & Validate Body
+    // -------------------------
+    const cfg = {};
+
+    if (typeof body.globalDiscountPercent !== "undefined")
+      cfg.globalDiscountPercent = Number(body.globalDiscountPercent);
+
+    if (typeof body.serviceChargePercent !== "undefined")
+      cfg.serviceChargePercent = Number(body.serviceChargePercent);
+
+    if (Array.isArray(body.taxes)) {
+      cfg.taxes = body.taxes.map((t) => ({
+        name: t.name || "Tax",
+        percent: Number(t.percent || 0),
+        code: t.code || "",
+        inclusive: !!t.inclusive,
+      }));
+    }
+
+    if (body.createdBy) cfg.createdBy = String(body.createdBy);
+    if (body.reason) cfg.reason = String(body.reason);
+    if (body.effectiveFrom) cfg.effectiveFrom = new Date(body.effectiveFrom);
+    cfg.activate = !!body.activate;
+
+    // -------------------------
+    // Validate numeric fields
+    // -------------------------
+    if (
+      typeof cfg.globalDiscountPercent === "number" &&
+      cfg.globalDiscountPercent < 0
+    )
+      return res
+        .status(400)
+        .json({ error: "globalDiscountPercent must be >= 0" });
+
+    if (
+      typeof cfg.serviceChargePercent === "number" &&
+      cfg.serviceChargePercent < 0
+    )
+      return res
+        .status(400)
+        .json({ error: "serviceChargePercent must be >= 0" });
+
+    if (Array.isArray(cfg.taxes)) {
+      for (const t of cfg.taxes) {
+        if (typeof t.percent !== "number" || t.percent < 0)
+          return res
+            .status(400)
+            .json({ error: "Each tax.percent must be a non-negative number" });
+      }
+    }
+
+    // -------------------------
+    // 🆕 Normalize Offers (if any)
+    // -------------------------
+    if (Array.isArray(body.offers)) {
+      cfg.offers = body.offers.map((offer) => ({
+        code: offer.code?.toUpperCase().trim() || "",
+        title: offer.title || "",
+        description: offer.description || "",
+        discountType: offer.discountType === "flat" ? "flat" : "percent", // default: percent
+        discountValue: Number(offer.discountValue || 0),
+        minOrderValue: Number(offer.minOrderValue || 0),
+        maxDiscountValue: Number(offer.maxDiscountValue || 0),
+        isActive: typeof offer.isActive === "boolean" ? offer.isActive : true,
+        validFrom: offer.validFrom ? new Date(offer.validFrom) : new Date(),
+        validTill: offer.validTill ? new Date(offer.validTill) : null,
+      }));
+
+      logger &&
+        logger.debug &&
+        logger.debug("createPricingConfig normalized offers", {
+          count: cfg.offers.length,
+          codes: cfg.offers.map((o) => o.code),
+        });
+    }
+
+    // -------------------------
+    // Ensure Admin Doc Exists
+    // -------------------------
+    logger &&
+      logger.debug &&
+      logger.debug("createPricingConfig fetching Admin doc", {
+        restaurantId: rid,
+      });
+
+    let adminDoc = await Admin.findOne({ restaurantId: rid });
+    if (!adminDoc) {
+      logger &&
+        logger.warn &&
+        logger.warn(
+          "createPricingConfig admin not found, creating minimal admin doc",
+          { restaurantId: rid }
+        );
+      adminDoc = await Admin.create({ restaurantId: rid, hashedPin: "" });
+    }
+
+    // -------------------------
+    // Add pricing config (via static helper)
+    // -------------------------
+    logger &&
+      logger.debug &&
+      logger.debug("createPricingConfig calling Admin.addPricingConfig", {
+        restaurantId: rid,
+      });
+
+    const updatedAdmin = await Admin.addPricingConfig(rid, cfg);
+
+    // -------------------------
+    // Publish and Return
+    // -------------------------
+    const out = sanitizeAdmin(updatedAdmin);
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "pricingConfigCreated",
+      data: {
+        version:
+          (cfg && cfg.version) ||
+          (updatedAdmin &&
+            updatedAdmin.pricingConfigs &&
+            updatedAdmin.pricingConfigs.slice(-1)[0]?.version) ||
+          null,
+      },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("createPricingConfig completed", { restaurantId: rid });
+    return res.status(201).json({ admin: out });
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error(
+        "Create pricing config error:",
+        err && err.stack ? err.stack : err
+      );
+    return next(err);
+  }
+}
+
+//=====================================================================================================
+/**
+ * Activate an existing pricing config version
+ * PATCH /api/:rid/admin/pricing/:version/activate
+ *
+ * Body: {} (no body required)
+ */
+async function activatePricingVersion(req, res, next) {
+  logger &&
+    logger.info &&
+    logger.info("Enter activatePricingVersion", { params: req.params });
+
+  try {
+    const { rid, version } = req.params;
+    if (!rid || !version) {
+      logger &&
+        logger.warn &&
+        logger.warn("activatePricingVersion missing params", { rid, version });
+      return res
+        .status(400)
+        .json({ error: "Missing restaurant id (rid) or version" });
+    }
+
+    const verNum = Number(version);
+    if (!Number.isFinite(verNum) || verNum <= 0)
+      return res.status(400).json({ error: "Invalid version" });
+
+    logger &&
+      logger.debug &&
+      logger.debug(
+        "activatePricingVersion calling Admin.activatePricingVersion",
+        { restaurantId: rid, version: verNum }
+      );
+
+    const updatedAdmin = await Admin.activatePricingVersion(rid, verNum);
+
+    safePublish(`restaurant:${rid}:staff`, {
+      event: "pricingConfigActivated",
+      data: { version: verNum },
+    });
+
+    logger &&
+      logger.info &&
+      logger.info("activatePricingVersion completed", {
+        restaurantId: rid,
+        version: verNum,
+      });
+
+    return res.json(sanitizeAdmin(updatedAdmin));
+  } catch (err) {
+    logger &&
+      logger.error &&
+      logger.error(
+        "Activate pricing version error:",
+        err && err.stack ? err.stack : err
+      );
+    return next(err);
+  }
+}
+//======================================================================================================
+// Exported functions
 module.exports = {
   login,
   staffLogin,
   generateOverrideToken,
   getMenu,
   updateMenu,
+  addMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+  restoreMenuItem,
+  updateCategory,
+  deleteCategory,
+  getAllCategories,
   getAnalytics,
   exportReport,
   updateTable,
   updatePin,
   updateStaffAliases,
-  addMenuItem,
   updateConfig,
   reopenBill,
+  addWaiterName,
+  updateWaiterName,
+  deleteWaiterName,
+  // Pricing endpoints
+  getPricingConfigs,
+  createPricingConfig,
+  activatePricingVersion,
 };

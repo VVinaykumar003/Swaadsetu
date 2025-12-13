@@ -18,7 +18,7 @@ const argv = require("minimist")(process.argv.slice(2), {
 });
 
 const OUT_FILE = argv.out;
-const MAX_DEPTH = parseInt(argv.depth, 20) || 5;
+const MAX_DEPTH = parseInt(argv.depth, 10) || 5;
 const EXCLUDE = new Set(
   (argv.exclude || "node_modules,uploads")
     .split(",")

@@ -1,0 +1,80 @@
+Tree generated on 2025-10-16 05:34:08.667 
+Project root: D:\UTKARSH\Live Projects\Vercel-live-Website\swad-setu\frontend-inhouse
+Max Depth: 5; Exclude: node_modules, uploads, .git, .next
+--------------------------------------------------
+D:\UTKARSH\Live Projects\Vercel-live-Website\swad-setu\frontend-inhouse
+├── .vscode
+│   └── settings.json
+├── public
+│   └── vite.svg
+├── src
+│   ├── api
+│   │   ├── admin
+│   │   │   └── admin.api.ts
+│   │   ├── staff
+│   │   │   ├── bill.api.ts
+│   │   │   ├── staff.login.ts
+│   │   │   └── staff.operations.api.ts
+│   │   └── client.ts
+│   ├── assets
+│   ├── components
+│   ├── pages
+│   │   ├── AdminDashboard
+│   │   │   ├── components
+│   │   │   │   └── Sidebar.tsx
+│   │   │   └── AdminDashboard.tsx
+│   │   ├── StaffDashboard
+│   │   │   ├── components
+│   │   │   │   ├── BillingView.tsx
+│   │   │   │   ├── BillModalComponent.tsx
+│   │   │   │   ├── ConfirmModal.tsx
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── OrderHistory.tsx
+│   │   │   │   ├── OrdersComponent.tsx
+│   │   │   │   ├── TableDetail.tsx
+│   │   │   │   └── TablesComponent.tsx
+│   │   │   ├── hooks
+│   │   │   │   ├── useBilling.ts
+│   │   │   │   ├── useHistory.ts
+│   │   │   │   ├── useOrders.ts
+│   │   │   │   ├── usePendingTracker.ts
+│   │   │   │   ├── useTables.ts
+│   │   │   │   └── useWaiters.ts
+│   │   │   ├── types
+│   │   │   │   └── index.ts
+│   │   │   ├── utils
+│   │   │   │   ├── extractors.ts
+│   │   │   │   ├── formatters.ts
+│   │   │   │   ├── mergeHelpers.ts
+│   │   │   │   ├── mergeOrdersIntoTables.ts
+│   │   │   │   └── normalize.ts
+│   │   │   ├── views
+│   │   │   │   ├── BillingViewWrapper.tsx
+│   │   │   │   ├── DashboardView.tsx
+│   │   │   │   ├── NotificationsView.tsx
+│   │   │   │   └── TableView.tsx
+│   │   │   └── StaffDashboard.tsx
+│   │   ├── AdminLogin.tsx
+│   │   ├── HomePage.tsx
+│   │   └── StaffLogin.tsx
+│   ├── App.css
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+├── .env
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── OrderandTable_APIContext.md
+├── package-lock.json
+├── package.json
+├── README.md
+├── Swad Setu - Full API Collection.postman_collection.json
+├── tree.js
+├── tree.txt
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
+--------------------------------------------------
+Finished writing tree to tree.txt

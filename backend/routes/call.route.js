@@ -1,93 +1,90 @@
+// routes/call.route.js
 const express = require("express");
 const router = express.Router({ mergeParams: true });
-
 const callController = require("../controllers/call.controller");
 
-// defensive imports
-let authMiddleware = null;
-let rateLimit = null;
-let helpers = null;
-let requireRole = null;
+// --------------------------- DEFENSIVE IMPORTS ---------------------------
+let authMiddleware = (req, res, next) => next();
+let requireRole = () => (req, res, next) => next();
+let rateLimit = {};
 
+// 🔹 Load authentication middleware
 try {
-  authMiddleware = require("../common/middlewares/auth.middleware");
+  const auth = require("../common/middlewares/auth.middleware");
+  // If the module exports a function directly, use it as is
+  authMiddleware =
+    typeof auth === "function" ? auth : auth.verifyToken || authMiddleware;
+  console.log("[call.routes] Auth middleware loaded successfully");
 } catch (e) {
   console.warn(
-    "auth.middleware not found — staff protections will error if used."
+    "[call.routes] auth.middleware not found — routes may be unprotected."
   );
 }
 
+// 🔹 Load role middleware
+try {
+  const role = require("../common/middlewares/role.middleware");
+  // The file exports the middleware function directly
+  requireRole =
+    typeof role === "function" ? role : role.requireRole || requireRole;
+  console.log("[call.routes] Role middleware loaded successfully");
+} catch (e) {
+  console.warn(
+    "[call.routes] role.middleware not found — skipping role enforcement."
+  );
+}
+
+// 🔹 Load optional rate limiter
 try {
   rateLimit = require("../common/middlewares/rateLimit.middleware");
 } catch (e) {
   console.warn(
-    "rateLimit.middleware not found — rate limiting disabled for call routes."
+    "[call.routes] rateLimit.middleware not found — no rate limiting."
   );
   rateLimit = {};
 }
 
-try {
-  helpers = require("../common/libs/helpers");
-} catch (e) {
-  console.warn(
-    "common/libs/helpers not found — staffAlias validation and requireRoleMiddleware unavailable."
-  );
-  helpers = null;
-}
-
-try {
-  requireRole = require("../common/middlewares/role.middleware");
-} catch (e) {
-  console.warn(
-    "role.middleware not found — role-based protections will error if used."
-  );
-  requireRole = null;
-}
-
-// helper wrappers
+// Utility: named limiter or no-op
 function limiter(name) {
   if (!rateLimit || !rateLimit[name]) return (req, res, next) => next();
   return rateLimit[name];
 }
 
-// Staff role middleware (defensive)
-let requireStaff = (req, res, next) => {
-  if (!requireRole) {
-    console.error("role.middleware not available — staff protection failed.");
-    return res.status(500).json({ error: "Server configuration error" });
-  }
-  return requireRole("staff")(req, res, next);
-};
+// --------------------------- ROLE GROUPS ---------------------------
+const staffOrAdmin = [authMiddleware, requireRole(["staff", "admin"])];
+const adminOnly = [authMiddleware, requireRole(["admin"])];
 
-// ensureStaffAlias middleware for resolve (validates staffAlias)
-const ensureStaffAliasMiddleware =
-  helpers && typeof helpers.ensureStaffAliasMiddleware === "function"
-    ? helpers.ensureStaffAliasMiddleware()
-    : (req, res, next) => next();
+// --------------------------- ROUTES ---------------------------
 
-/**
- * Routes:
- *
- * POST   /api/:rid/calls            -- public (customer)
- * PATCH  /api/:rid/calls/:id/resolve -- staff only
- * GET    /api/:rid/calls/active     -- staff only
- */
+// 🧾 Create a new call (Customer/Table)
+router.post("/", limiter("createCall"), callController.createCall);
 
-// Create call (public) - apply light rate limiting via apiLimiter if available
-router.post("/", limiter("apiLimiter"), callController.createCall);
-
-// Resolve call (staff only)
-router.patch(
-  "/:id/resolve",
-  [requireStaff, limiter("staffLimiter"), ensureStaffAliasMiddleware],
-  callController.resolveCall
-);
-
-// Get active calls (staff only)
+// 👩‍🍳 Get active calls (Staff/Admin)
 router.get(
   "/active",
-  [requireStaff, limiter("staffLimiter")],
+  authMiddleware, // Must run first
+  requireRole(["staff", "admin"]), // Checks req.user.role
+  limiter("getActiveCalls"),
   callController.getActiveCalls
 );
 
+// ✅ Resolve a call (Staff/Admin)
+router.patch(
+  "/:id/resolve",
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  limiter("resolveCall"),
+  callController.resolveCall
+);
+
+// 📜 Get resolved call history (Staff/Admin)
+router.get(
+  "/resolved",
+  authMiddleware,
+  requireRole(["staff", "admin"]),
+  limiter("getResolvedCalls"),
+  callController.getResolvedCalls
+);
+
+// ----------------------------------------------------------------
 module.exports = router;

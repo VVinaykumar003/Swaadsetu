@@ -6,7 +6,13 @@ const TableSchema = new Schema({
   restaurantId: { type: String, required: true, index: true },
   tableNumber: { type: Number, required: true }, // uniqueness enforced per-restaurant by index below
   capacity: { type: Number, required: true, min: 1 },
+  status: {
+    type: String,
+    enum: ["available", "occupied"],
+    default: "available",
+  },
   isActive: { type: Boolean, default: true },
+  CurrentOrderId: { type: String, default: null },
   // session info
   currentSessionId: { type: String, default: null, index: true },
   sessionExpiresAt: { type: Date, default: null }, // optional TTL for auto-expiry logic
@@ -30,6 +36,14 @@ TableSchema.index({ currentSessionId: 1 });
 // Middleware to update timestamps
 TableSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
+
+  // Automatically set status based on session existence
+  if (this.currentSessionId) {
+    this.status = "occupied";
+  } else {
+    this.status = "available";
+  }
+
   next();
 });
 

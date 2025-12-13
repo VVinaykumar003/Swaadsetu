@@ -293,6 +293,7 @@ async function createTable(req, res, next) {
 async function deleteTable(req, res, next) {
   try {
     const { rid, id } = req.params;
+    console.log(`rid : ${rid} ,id: ${id}`);
 
     if (!requestHasRole(req, ["admin"])) {
       return res.status(403).json({ error: "Forbidden: admin required" });
@@ -310,7 +311,9 @@ async function deleteTable(req, res, next) {
       data: { tableId: id },
     });
 
-    return res.status(204).send();
+    // return res.status(204).send();
+    return res.status(200).json({ success: true });
+
   } catch (error) {
     logger && logger.error && logger.error("Table deletion error:", error);
     return next(error);
