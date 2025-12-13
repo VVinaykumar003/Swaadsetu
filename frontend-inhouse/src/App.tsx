@@ -50,7 +50,7 @@ function App() {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* 🌐 Public Routes */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<Landing />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/staff-login" element={<StaffLogin />} />
 
@@ -68,7 +68,7 @@ function App() {
 
    
       
-          <Route path="/web" element={<SwaadsetuLanding />} />
+          <Route path="/" element={<SwaadsetuLanding />} />
           <Route path="/about" element={<About />} />
           <Route path="/features" element={<TabbedCarouselLayout/>} />
           <Route path="/blogs" element={<BlogsPage/>} />
