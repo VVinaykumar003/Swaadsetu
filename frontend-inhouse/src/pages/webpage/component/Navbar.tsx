@@ -44,7 +44,7 @@ const Navbar = () => {
 
 
   return (
-    <nav className="fixed top-0 inset-x-0 bg-black backdrop-blur border-b 0 shadow-lg z-50">
+    <nav className="fixed top-0 inset-x-0 bg-black backdrop-blur border-b 0 shadow-lg z-50 ">
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between relative">
         {/* Logo - Fixed with proper sizing and spacing */}
       
@@ -56,7 +56,7 @@ const Navbar = () => {
           />
 
         {/* Desktop links */}
-        <ul className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <ul className="hidden md:flex items-center gap-6 text-sm font-medium font-sans">
           {['home', 'about', 'features', 'contact'].map((section) => (
             <li key={section}>
               <button
@@ -73,7 +73,7 @@ const Navbar = () => {
           ))}
           <li>
             <button onClick={() => navigate('/login')} className="bg-yellow-500 text-black px-4 py-2 rounded-md font-medium hover:bg-yellow-600 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/80">
-              Login       
+              Go to app    
             </button>
           </li>
 
@@ -107,7 +107,7 @@ const Navbar = () => {
             transition={{ duration: 0.2 }}
             className="md:hidden absolute left-0 right-0 top-full mt-2 px-4"
           >
-            <ul className="bg-black/90 backdrop-blur border border-yellow-500/40 rounded-lg shadow-lg py-3 flex flex-col">
+            <ul className="bg-black/90 backdrop-blur border border-yellow-500/40 rounded-lg shadow-lg py-3 flex flex-col font-sans">
               {['home', 'about', 'features', 'contact'].map(
                 (section) => (
                   <li key={section} className="w-full">

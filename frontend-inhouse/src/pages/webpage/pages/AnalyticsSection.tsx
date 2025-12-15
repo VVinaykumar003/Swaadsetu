@@ -17,7 +17,7 @@ export function AnalyticsSection() {
           className="w-full h-14 sm:h-16 md:h-20 lg:h-24 object-cover rounded-md -ml-5 md:ml-0"
         />
         <div className="absolute inset-0 flex items-center justify-center px-4">
-          <h3 className="text-lg sm:text-base md:text-lg font-semibold text-black text-center mt-5 lg:-ml-0.5  -ml-10 mr-8">
+          <h3 className="text-lg sm:text-base md:text-lg font-semibold text-black text-center mt-5 lg:-ml-0.5  -ml-13 mr-4">
             Admin Dashboard
           </h3>
         </div>

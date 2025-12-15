@@ -20,15 +20,15 @@ export function StaffSection() {
   return (
 <section className="section py-16 bg-[#111111]">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20">
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       {/* Top label */}
-      <div className="relative w-56 h-10 flex items-center mb-2">
+      <div className="relative w-56 h-10 flex items-center mb-2 -ml-4.5 ">
         <img
           src={bg}
           alt="Customer Experience"
           className="absolute inset-0 w-full h-full object-cover rounded-md"
         />
-        <div className="relative z-10 px-4">
+        <div className="absolute z-10 px-4">
           <h3 className="text-sm sm:text-base font-semibold text-black ml-2 mt-2.5">
             Customer Experience
           </h3>

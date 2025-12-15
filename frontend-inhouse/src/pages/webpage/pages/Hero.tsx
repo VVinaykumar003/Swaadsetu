@@ -46,10 +46,10 @@ const Counter = ({ target, label }: { target: number; label: string }) => {
 
   return (
     <div className="flex flex-col items-center md:items-start">
-      <span className="text-3xl md:text-5xl font-extrabold leading-none lg:text-white">
+      <span className="text-3xl md:text-5xl font-extrabold leading-none lg:text-white ">
         {value}+
       </span>
-      <span className="mt-1 text-[10px] md:text-xs lg:text-neutral-200 sm:text-gray-600 text-center md:text-left">
+      <span className="mt-1 text-[10px] md:text-xs lg:text-neutral-200 sm:text-gray-600 text-center md:text-left md:text-white">
         {label}
       </span>
     </div>
@@ -76,7 +76,7 @@ const Hero = () => {
         <img
           src={mobileImage}
           alt="Mobile hero banner"
-          className="w-full h-[70vh] object-cover mx-auto"
+          className="w-full h-[70vh] object-cover mx-auto mt-10"
           style={{ objectPosition: "center" }}
         />
       </div>
@@ -110,7 +110,7 @@ const Hero = () => {
             </div>
 
             {/* counters */}
-            <div className="flex gap-10 justify-start lg:text-white">
+            <div className="flex gap-10 justify-start lg:text-white md:text-white">
               <Counter target={58} label="Restaurants Using SwaadSetu" />
               <Counter target={100} label="Daily Orders Processed" />
               <Counter target={100} label="Happy Diners Served" />

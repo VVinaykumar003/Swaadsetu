@@ -123,7 +123,7 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
                 <Mail size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
-                <span className="text-[#EDEDED]">swaadsetu@gmail.com</span>
+                <span className="text-[#EDEDED]">contact@swaadsetu.com</span>
               </li>
               <li className="flex items-start space-x-3">
                 <Phone size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
