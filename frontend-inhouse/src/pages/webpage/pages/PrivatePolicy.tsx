@@ -2,9 +2,6 @@ import { Footer } from "../component/Footer";
 import Navbar from "../component/Navbar";
 import BackButton from "../component/ui/BackButton";
 
-
-
-
 const PrivatePolicy = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#333333] scroll-smooth">
