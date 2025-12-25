@@ -1,7 +1,10 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Users, User, ShoppingCart } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import { ShoppingCart, User, Users } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import bg from "../assets/logo3.png"
+import { useNavigate, useParams } from "react-router-dom";
+// import { getRestaurantByRid } from "../api/restaurant.api";
+// import { useTenant } from "../context/TenantContext";
 
 type ButtonBoxProps = {
   label: string;
@@ -11,81 +14,173 @@ type ButtonBoxProps = {
 
 export default function LandingModern() {
   const navigate = useNavigate();
-  const shouldReduceMotion = useReducedMotion();
+  const { rid: ridFromUrl } = useParams();
+  // const { setRid } = useTenant();
 
-  const handleNavigation = (path: string) => navigate(path);
+  const rid = ridFromUrl!;
+  const [restaurantName, setRestaurantName] = useState(rid);
+
+  // useEffect(() => {
+  //   setRid(rid); // ensure tenant context stays aligned
+  // }, [rid, setRid]);
+
+  // useEffect(() => {
+  //   getRestaurantByRid(rid)
+  //     .then((data) => {
+  //       setRestaurantName(data.restaurantName);
+  //     })
+  //     .catch((error) => {
+  //       console.error("Failed to fetch restaurant name:", error);
+  //     });
+  // }, [rid]);
+
+  const shouldReduceMotion = useReducedMotion();
 
   const motionProps = shouldReduceMotion
     ? { initial: { opacity: 1 }, animate: { opacity: 1 } }
     : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 
-  const ButtonBox = ({ label, onClick, icon }: ButtonBoxProps) => (
-    <motion.button
-      {...motionProps}
-      whileHover={shouldReduceMotion ? {} : { scale: 1.04 }}
-      whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 320, damping: 22 }}
-      onClick={onClick}
-      className="relative w-[8.5rem] sm:w-56 md:w-64 lg:w-72 h-40 sm:h-48 md:h-52 lg:h-56 bg-white/95 backdrop-blur-sm border border-emerald-100 flex flex-col items-center justify-center gap-3 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 cursor-pointer"
-      aria-label={label}
-    >
-      <div className="flex items-center justify-center text-4xl sm:text-5xl text-emerald-600">
-        {icon}
-      </div>
-      <div className="text-sm sm:text-base md:text-lg font-semibold text-emerald-700">
-        {label}
-      </div>
-      <div className="absolute inset-0 rounded-2xl bg-emerald-50 opacity-0 hover:opacity-30 transition-opacity duration-200 pointer-events-none" />
-    </motion.button>
+  const ButtonBox = ({ label, onClick, icon ,text}: ButtonBoxProps) => (
+   <motion.button
+  {...motionProps}
+  whileHover={shouldReduceMotion ? {} : { scale: 1.03 }}
+  whileTap={shouldReduceMotion ? {} : { scale: 0.97 }}
+  transition={{ type: "spring", stiffness: 260, damping: 20 }}
+  onClick={onClick}
+  className="
+    relative
+    w-full max-w-xs
+    sm:max-w-sm md:max-w-md lg:max-w-lg
+    h-28
+    sm:h-36 md:h-40 lg:h-44
+    bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600
+    border border-yellow-300/50
+    flex flex-col items-center justify-center gap-2
+    rounded-2xl
+    shadow-[0_0_15px_rgba(234,179,8,0.4)]
+    hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]
+    transition-all duration-200
+    cursor-pointer overflow-hidden group
+  "
+>
+  {/* glossy overlay */}
+  <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-80 px-1" />
+
+  {/* icon */}
+  <div
+    className="
+      relative z-10
+      text-3xl
+      sm:text-4xl md:text-5xl
+      drop-shadow-sm
+      text-black
+    "
+  >
+    {icon}
+  </div>
+
+  {/* label */}
+  <div
+    className="
+      relative z-10
+      font-bold text-black drop-shadow-sm
+      px-3 py-1 rounded-2xl
+      text-xs
+      [font-size:clamp(0.7rem,2.8vw,0.95rem)]
+      sm:text-sm md:text-base lg:text-lg
+      text-center
+    "
+  >
+    {label}
+  </div>
+
+  {/* description – only on md+ so mobile stays compact */}
+ <p
+  className="
+    hidden sm:block
+    relative z-10
+    text-xs sm:text-sm md:text-base lg:text-lg
+    font-medium
+    text-black/90
+    px-4 pt-2 pb-3
+    text-center
+    leading-relaxed
+   
+
+    rounded-xl
+    mt-1 sm:mt-2
+    shadow-[0_4px_12px_rgba(0,0,0,0.12)]
+  "
+>
+  {text}
+</p>
+
+</motion.button>
+
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-4">
-      <main className="w-full max-w-5xl mx-auto flex flex-col items-center gap-10">
-        {/* Header */}
+    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white font-[Outfit] overflow-x-hidden bg-[radial-gradient(circle_at_50%_-20%,#1a1a1a,transparent)]">
+{/* 
+      className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-zinc-900 to-black p-4" */}
+          <nav className="top-nav px-[5%] py-2 flex items-center justify-between text-[0.7rem] tracking-[0.2em] uppercase text-[#888888]">
+        <div className="lg:-ml-16 -ml-4 md:-ml-10">
+          <img src={bg} className="lg:w-60 lg:h-13 left-0  w-37 h-10"/>
+        </div>
+
+         <div className="flex items-center gap-2">
+          <span className="h-[6px] w-[6px] rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]" />
+          <span>Live System</span>
+        </div>
+       
+      </nav>
+      <main className="w-full max-w-5xl mx-auto flex flex-col items-center gap-10 mt-3">
         <header className="text-center px-2">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-tight">
-            Swad Setu
+          <h1    className="
+            restaurant-name
+            text-center mb-2 leading-[0.9]
+            font-[Syncopate] 
+            lg:text-[clamp(2.5rem,5vw,5rem)]
+            bg-[linear-gradient(180deg,#ffffff_0%,#444444_100%)]
+            bg-clip-text text-transparent
+            text-[clamp(2rem,2vw,5rem)]
+          ">
+            {restaurantName || " Vrindavan Restaurant "} 
           </h1>
-          <p className="text-xs sm:text-sm text-gray-600 mt-2">
-            Quick access panel for Admin, Staff, and Orders — designed for
-            in-house restaurant tablets.
+          <p className="text-xs sm:text-sm text-yellow-400 mt-2">
+            Quick access for Admin, Staff, and Orders
           </p>
         </header>
 
-        {/* 3 horizontal cards — responsive */}
         <section className="w-full flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 flex-wrap md:flex-nowrap">
           <ButtonBox
             label="Admin Access"
-            onClick={() => handleNavigation("/admin-login")}
-            icon={<User className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10" />}
+            onClick={() => navigate(`/t/${rid}/admin-login`)}
+            icon={<User className="w-9 h-9" />}
+            text={"Dashboard and Analytics"}
           />
 
           <ButtonBox
             label="Staff Access"
-            onClick={() => handleNavigation("/staff-login")}
-            icon={<Users className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10" />}
+            onClick={() => navigate(`/t/${rid}/staff-login`)}
+            icon={<Users className="w-9 h-9" />}
+             text={"Manage tables and service"}
           />
 
           <ButtonBox
             label="Place Order"
-            onClick={() => handleNavigation("/table-select")}
-            icon={
-              <ShoppingCart className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10" />
+            onClick={() =>
+              (window.location.href = `${
+                import.meta.env.VITE_USER_LINK
+              }t/${rid}`)
             }
+            icon={<ShoppingCart className="w-9 h-9" />}
+             text={"View menu and order now "}
           />
         </section>
 
-        {/* Info bar */}
-        <section className="  text-center border border-emerald-50 ">
-          <p className="text-xs sm:text-sm text-gray-600">
-            Your restaurant, perfectly connected.
-          </p>
-        </section>
-
-        {/* Footer */}
-        <footer className="text-xs text-gray-400 mt-4">
-          © {new Date().getFullYear()} Swad Setu • Zager Digital Services
+        <footer className="lg:mt-30 border-t border-[rgba(255,255,255,0.05)] py-10 text-center">
+          © {new Date().getFullYear()} Swaad Setu •A Product By Zager 
         </footer>
       </main>
     </div>

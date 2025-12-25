@@ -1,26 +1,22 @@
 
 import { useNavigate } from "react-router-dom";
-import bg from "../assets/SwaadSetu_shape.png";
+import bg from "../assets/adminDashboard.jpeg";
 
 export function AnalyticsSection() {
     const navigate = useNavigate();
   return (
-   <section id="features" className="py-24 bg-black">
+   <section id="features" className="py-12 bg-black">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-20">
         {/* Section Header */}
       <div className="max-w-3xl mx-auto mb-16 text-left md:text-center">
       {/* Label with bg image */}
-      <div className="relative w-56 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg md:mx-auto">
+      <div className=" flex justify-center items-center mt-10">
         <img
           src={bg}
           alt="Admin Dashboard"
-          className="w-full h-14 sm:h-16 md:h-20 lg:h-24 object-cover rounded-md -ml-5 md:ml-0"
+          className="w-50 h-10 "
         />
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <h3 className="text-lg sm:text-base md:text-lg font-semibold text-black text-center mt-5 lg:-ml-0.5  -ml-13 mr-4">
-            Admin Dashboard
-          </h3>
-        </div>
+       
       </div>
  
 

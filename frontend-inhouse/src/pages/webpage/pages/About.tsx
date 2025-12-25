@@ -2,6 +2,7 @@ import { FC, useEffect } from "react";
 import { motion } from "framer-motion";
 import Navbar from "../component/Navbar";
 import { Footer } from "../component/Footer";
+import BackButton from "../component/ui/BackButton";
 
 const About: FC = () => {
      /* 🔥 GUARANTEED SCROLL TO TOP */
@@ -10,7 +11,13 @@ const About: FC = () => {
     }, []);
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-50 via-white to-yellow-50 text-black overflow-x-hidden">
-      <Navbar/>
+      {/* Fixed header */}
+      <header className="fixed top-0 left-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <Navbar />
+        <div className="px-0 -mx-6 py-2">
+          <BackButton />
+        </div>
+      </header>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 mt-16">
         {/* Page title */}

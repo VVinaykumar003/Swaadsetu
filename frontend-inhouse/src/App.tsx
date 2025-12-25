@@ -1,12 +1,13 @@
 // App.tsx
 import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes, BrowserRouter } from "react-router-dom";
-import ScrollToTop from "./pages/webpage/component/ui/ScrollToTop";
-
+import { Navigate, Route, Routes} from "react-router-dom";
 import SwaadsetuLanding from "./pages/webpage/pages/swaadsetu-landing";
 import About from "./pages/webpage/pages/About";
 import TabbedCarouselLayout from "./pages/webpage/pages/Features";
 import BlogsPage from "./pages/webpage/pages/Blogs";
+import FAQ from "./pages/webpage/pages/FAQ";
+import NewSection from "./pages/webpage/pages/NewSection";
+import PrivatePolicy from "./pages/webpage/pages/PrivatePolicy";
 
 // Lazy pages
 const Landing = lazy(() => import("./pages/HomePage"));
@@ -38,6 +39,9 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/features" element={<TabbedCarouselLayout />} />
           <Route path="/blogs" element={<BlogsPage />} />
+          <Route path="/faq" element ={<FAQ/>}/>
+          <Route path="/hero" element={<NewSection/>}/>
+          <Route path="/termsandcondition" element={<PrivatePolicy/>}/>
 
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/staff-login" element={<StaffLogin />} />

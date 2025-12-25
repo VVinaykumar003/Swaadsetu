@@ -2,7 +2,7 @@ import { Check,} from "lucide-react";
 import { LayoutGrid } from "../component/LayoutGrid";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import bg from "../assets/SwaadSetu_shape.png";
+import bg from "../assets/aboutheading.png";
 
 const AboutSection = () => {
 
@@ -109,32 +109,28 @@ const SkeletonFour = () => {
           </motion.div>
 
           {/* Right - Content */}
-          <div className="relative overflow-hidden bg-white ">
+          <div className="relative overflow-hidden bg-white  ">
             {/* 🟡 Main Content */}
-            <div className="max-w-6xl mx-auto px-6 pt-2 pb-20 lg:pt-20 lg:pb-2 relative z-20">
+            <div className="max-w-6xl mx-auto px-6 pt-2 pb-20 lg:pt-10 lg:pb-2 relative z-20">
               <div className="sm:space-y-2 md:space-y-6 lg:space-y-6 ">
-                <div className="relative  w-60 h-15 -ml-5  md:w-60  max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex items-center text-center ">
+
+                <div className="  w-60 h-auto ml-3  md:w-60 ">
                   {/* Background image */}
                   <img
                     src={bg}
                     alt="About Swaad Setu"
-                    className="absolute inset-0 w-60 h-10 object-cover "
+                    className="w-60 h-auto object-cover mix-blend-multiply"
+                   
                   />
 
-                  {/* Optional dark overlay for readability */}
-                  {/* Text content on top */}
-                  <div className="relative z-10 px-4 mt-5.5 ">
-                    <h3 className="text-lg px-3 mt-2 mb-10 font-semibold text-black ">
-                      About Swaad Setu
-                    </h3>
-                  </div>
+                
                 </div>
 
                 <h2 className="text-3xl lg:text-5xl font-bold font-heading text-black leading-tight p-2  ">
                   Revolutionizing Restaurant Management in India
                 </h2>
 
-                <p className="text-sm lg:text-lg text-[#555555] leading-relaxed max-w-3xl p-2.5">
+                <p className="text-sm lg:text-lg text-[#555555] leading-relaxed max-w-3xl p-2.5 ">
                   Swaad Setu is India's most comprehensive restaurant management
                   platform, designed specifically for the unique needs of Indian
                   restaurants. From street food stalls to fine dining

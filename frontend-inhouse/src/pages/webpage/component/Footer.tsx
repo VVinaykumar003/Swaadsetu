@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom"
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react"
 import Logo from '../assets/Final_Logo_White.png'
-import SoloLogo from '../assets/Logo_Final_white.png'
 import FooterLogo from '../assets/Logo.png'
 import { useNavigate } from "react-router-dom"
 
@@ -15,10 +14,10 @@ export function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Company Info */}
           <div className="space-y-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-6">
                <div className="mt-2">
                 <button onClick={() => navigate('/web')}>
-                <img src={FooterLogo} className="w-50 h-10"/>
+                <img src={FooterLogo} className="w-55 h-10"/>
                 </button>
              </div>
             </div>
@@ -56,7 +55,7 @@ export function Footer() {
 
           {/* Product */}
           <div>
-            <h3 className="text-lg font-semibold font-heading mb-6">Product</h3>
+            <h3 className="text-lg font-semibold font-heading mb-6 ">Product</h3>
             <ul className="space-y-3">
               <li>
                 <Link to="#features" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
@@ -65,21 +64,16 @@ export function Footer() {
               </li>
               <li>
                 <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
-                  Pricing to </Link>
+                  Pricing  </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   Integrations
                 </Link>
-              </li>
+              </li> */}
               <li>
-                <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
+                <Link to="/faq" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   FAQ
-                </Link>
-              </li>
-              <li>
-                <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
-                  Changelog
                 </Link>
               </li>
             </ul>
@@ -90,21 +84,21 @@ export function Footer() {
             <h3 className="text-lg font-semibold font-heading mb-6">Company</h3>
             <ul className="space-y-3">
               <li>
-                <Link to="#about" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
+                <Link to="/about" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   About Us
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   Careers
                 </Link>
-              </li>
+              </li> */}
               <li>
-                <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
+                <Link to="/blogs" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   Blog
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   Press
                 </Link>
@@ -113,7 +107,7 @@ export function Footer() {
                 <Link to="#" className="text-[#EDEDED] hover:text-[#FFBE00] transition-colors">
                   Partners
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </div>
 
@@ -123,7 +117,7 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
                 <Mail size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
-                <span className="text-[#EDEDED]">contact@swaadsetu.com</span>
+                <span className="text-[#EDEDED]">connect@swaadsetu.com</span>
               </li>
               <li className="flex items-start space-x-3">
                 <Phone size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
@@ -131,36 +125,57 @@ export function Footer() {
               </li>
               <li className="flex items-start space-x-3">
                 <MapPin size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
-                <span className="text-[#EDEDED]">Zager Digital Services, CSIT Durg,Pulgao Chowk</span>
+                <span className="text-[#EDEDED]">Zager Digital Services,  <br/> Startup Enclave ,
+                  <br/>CSIT Durg, <br/> Chhattisgarh 491001</span>
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-[#333333] pt-8">
-          <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0">
-          
-            <div className="grid sm:grid-cols-1 gap-3 md:grid-cols-6 md:gap-4 md:place-content-center 
-            md:justify-self-center md:self-center  place-items-center md:ml-30">
-               <Link to="/web" className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors">
-                Home
-              </Link>
-               <Link to="#" className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors">
-                Contact
-              </Link>
-              <Link to="#" className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors">
-                Privacy Policy
-              </Link>
-              <Link to="#" className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors">
-                Terms of Service
-              </Link>
-              <Link to="#" className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors">
-                Cookie Policy
-              </Link>
-            </div>
-          </div>
-        </div>
+     <div className="border-t border-[#333333] pt-8">
+  <div className="flex flex-col md:flex-row justify-center items-center">
+    <div
+      className="
+        grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5
+        gap-x-6 gap-y-3
+        place-items-center 
+      "
+    >
+      <Link
+        to="/web"
+        className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors "
+      >
+        Home
+      </Link>
+      <Link
+        to="#"
+        className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors "
+      >
+        Contact
+      </Link>
+      <Link
+        to="/termsandcondition"
+        className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors "
+      >
+        Privacy Policy
+      </Link>
+      <Link
+        to="/termsandcondition"
+        className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors "
+      >
+        Terms of Service
+      </Link>
+      <Link
+        to="/termsandcondition"
+        className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors "
+      >
+        Cookie Policy
+      </Link>
+    </div>
+  </div>
+    </div>
+
     
       <div className="border-t border-[#333333] pt-8 mt-5  justify-center items-center gap-3 flex flex-col " >
         <div>
@@ -169,9 +184,17 @@ export function Footer() {
           </button>
         </div>
 
-        <div >
+        <div className="hidden md:inline-block " >
            <button onClick={() => navigate('/web')}>
-            <p className="text-sm text-[#888888]">© 2025 Swaad Setu-By ZAGER</p>
+            <p className="text-sm text-[#888888]"> Swaad Setu-A Product By </p>
+              <p  className="text-sm ml-1.5" >© 2025 Zager Digital Services Pvt. Ltd.</p>
+          </button>
+        </div>
+
+        <div className="md:hidden" >
+           <button onClick={() => navigate('/web')}>
+            <p className="text-sm text-[#888888]"> Swaad Setu-A Product By </p>
+            <p className="text-sm  ml-1.5">© 2025 Zager Digital Services Pvt. Ltd.</p>
           </button>
         </div>
 

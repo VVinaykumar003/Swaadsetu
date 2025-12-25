@@ -22,14 +22,29 @@ const TABS: Tab[] = [
     ],
     detailLeft: {
       title: "Admin Control",
-      lines: ["Fast ordering", "Queue management", "Kiosk ready"],
+      lines: ["Table Management", "Menu Management", "Staff Management","Security Control (PIN Management)","Taxes & Discount Configuration","AI-Based Analytics","Combo & Daily Offers","Complete Order History","Dynamic Pricing Control"],
     },
     detailRight: {
       title: "Admin Insights",
       lines: [
-        "Fast ordering gives your customers a frictionless experience, reducing cart drop-off and improving table turnover.",
-        "Queue management helps admins see bottlenecks in real time and redistribute workload across staff.",
-        "Kiosk-ready flows make it easy to plug into self-service hardware without redesigning your operations.",
+        "	Design and customize your restaurant’s table layout digitally. Assign orders to specific tables and monitor table status (Occupied, Free, or Billed) in real-time.",
+
+        "	Instantly update menu items, descriptions, and categories. Use the digital interface to toggle item availability (In-stock/Out-of-stock) to prevent customer disappointment.",
+
+        "Create and manage staff user accounts with specific roles (Admin, Captain, Chef). Monitor staff activity logs and performance to ensure operational accountability.",
+
+        "Maintain high security with the ability to change Admin and Staff access PINs at any time, ensuring sensitive business data remains protected.",
+
+        "Flexibility to change GST/Tax percentages and apply flat or percentage-based discounts across the menu or for specific orders..",
+
+        "Harness the power of AI to predict peak hours, identify buying patterns, and get automated recommendations on menu optimization for higher profitability.",
+
+       `Easily create "Combo Offers" to increase average order value and set "Daily Offers" (e.g., Happy Hours or Weekend Specials) to drive traffic during slow periods.`,
+
+        "Access a searchable archive of all past orders. Analyze historical data to understand long-term trends and handle any billing queries with transparency.",
+
+        "Update pricing instantly across the platform to reflect seasonal changes or special promotional events."
+
       ],
     },
   },
@@ -43,14 +58,20 @@ const TABS: Tab[] = [
     ],
     detailLeft: {
       title: "Staff Workflow",
-      lines: ["Table management", "Menu syncing", "POS integration"],
+      lines: ["Accept or Reject Orders", "Real-Time Status Tracking", "	Integrated Kitchen Screen" ,"Assign Waiter/Captain","Live Table Clearing","Dine-In vs. Takeout Tabs" , `Add Items or "Fine" Charges`, "	Edit & Finalize Bills","On-the-Fly Discounts"],
     },
     detailRight: {
       title: "Staff Performance",
       lines: [
-        "Table management lets staff quickly see which tables need attention and which are ready to close.",
-        "Menu syncing ensures every device shows the latest prices, items, and availability — instantly.",
-        "POS integration removes double entry and cuts down billing errors during rush hours.",
+        "Staff can instantly review incoming QR orders and accept them to start preparation or reject them with a reason.",
+        "Change order status (e.g., Preparing, Ready, Served) in real-time, instantly notifying the customer and the admin dashboard.",
+        "A dedicated kitchen view that organizes orders by time and priority, ensuring the chef always knows what to cook next.",
+        "Assign specific staff names to handle individual tables for better accountability and personalized service.",
+        "Update table availability with a single tap once a guest departs, allowing for faster seating of the next party.",
+       ` Separate, organized tabs for "Dine-In" and "Takeaway" to help staff prioritize packaging versus table service.`,
+       "Easily add more items to an ongoing table session or include specific service/fine charges as per restaurant policy.",
+       "Modify order quantities or remove items before the final print to ensure 100% billing accuracy.",
+       "Apply approved discounts directly from the staff portal to resolve customer issues or honor special promotions."
       ],
     },
   },
@@ -64,14 +85,28 @@ const TABS: Tab[] = [
     ],
     detailLeft: {
       title: "User Experience",
-      lines: ["Delivery routing", "Partner apps", "Discount management"],
+      lines: ["Scan & Explore", "Table-Mapped Orders", "Add Multiple Orders","Real-Time Order Tracking" ,`	"Call a Waiter" Button: ` ,"Special Instructions","Integrated Payments","Instant Bill Download"],
     },
     detailRight: {
       title: "User Retention",
       lines: [
-        "Smart delivery routing reduces delays and improves overall satisfaction for repeat orders.",
-        "Deep integrations with partner apps keep you visible where your customers already spend time.",
-        "Discount management lets you run targeted offers that actually drive loyalty, not just one-time sales.",
+        "Customers simply scan the table-specific QR code to launch the full, high-resolution digital menu directly on their mobile browser.",
+
+        "Because each QR is unique to a table, orders are automatically mapped to the correct location without manual input.",
+
+        `Diners can keep their session active and add "rounds" of multiple orders (starters first, main course later) to the same running bill.`,
+
+        `: Once an order is placed, customers can see the live status (e.g., "Accepted," "In Preparation," or "Out for Delivery/Served") directly on their phone screen.`,
+
+        `A dedicated button allows guests to request physical assistance at their table with a single tap, notifying the Staff Portal instantly.`,
+
+        `	Special Instructions: Add specific notes for the chef (e.g., "Extra spicy" or "No onions") during the checkout process.`,
+
+        " Customers can pay via UPI, cards, or wallets using integrated, PCI-DSS compliant gateways.",
+
+        "After a successful payment, the final invoice is generated and can be downloaded instantly to the phone as a PDF for the customer's records."
+
+
       ],
     },
   },

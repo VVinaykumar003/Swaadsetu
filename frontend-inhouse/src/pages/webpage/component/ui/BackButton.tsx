@@ -14,7 +14,7 @@ export default function BackButton() {
                  transition absolute"
     >
       <ArrowLeft size={18} />
-      Back to Home
+    
     </button>
   );
 }
