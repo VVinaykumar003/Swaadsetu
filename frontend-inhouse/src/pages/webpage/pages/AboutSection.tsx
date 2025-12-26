@@ -2,7 +2,7 @@ import { Check,} from "lucide-react";
 import { LayoutGrid } from "../component/LayoutGrid";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import bg from "../assets/aboutheading.png";
+import bg from "../assets/About.png";
 
 const AboutSection = () => {
 

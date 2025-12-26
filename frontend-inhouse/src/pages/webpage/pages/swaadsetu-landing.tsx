@@ -70,13 +70,6 @@ const SwaadsetuLanding: React.FC = () => {
         <Hero />
       </section>
 
-      {/* <MobileFloatingButton
-        onClick={() => {
-          console.log("FAB clicked");
-          // navigate("/create") or open modal
-        }}
-      /> */}
-
       {/* About Section */}
       <section id="about">
         <AboutSection />
