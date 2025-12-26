@@ -8,21 +8,3 @@
 }
 /* src/index.css or globals.css */
 
-
-@media (min-width: 835px) and (max-width: 885px) {
-  /* centered, compact layout */
-  .min-[835px]:justify-start.max-[885px]:justify-center { justify-content: center; }
-  .max-[885px]:pl-8 { padding-left: 2rem; }
-  /* all max-[885px] variants */
-}
-
-@media (min-width: 768px) {
-  /* original md+ desktop layout */
-  .md\:pl-28 { padding-left: 7rem; }
-  /* all md: variants */
-}
-
-.Link{
-  outline: blue;
-  border:" 1px";
-}
