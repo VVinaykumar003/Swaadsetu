@@ -40,7 +40,7 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 inset-x-0 bg-black/95 backdrop-blur border-b border-zinc-800 shadow-lg z-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* top row */}
         <div className="flex items-center justify-between py-3">
           {/* logo */}
@@ -48,7 +48,7 @@ const Navbar = () => {
             src={Logo}
             alt="Swaadsetu Logo"
             onClick={() => navigate("/web")}
-            className="h-8 sm:h-10 w-auto object-contain cursor-pointer"
+            className="h-8 sm:h-10 w-auto object-contain cursor-pointer lg:-ml-9 -ml-4"
           />
 
           {/* desktop links */}

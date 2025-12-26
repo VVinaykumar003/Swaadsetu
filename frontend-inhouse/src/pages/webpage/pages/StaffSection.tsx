@@ -72,11 +72,11 @@ const StaffSection = () => {
               >
                
 
-                 <div className=" flex justify-center items-center mt-10">
+                 <div className=" flex justify-center items-center mt-10 top-0 bottom-0 left-4">
                     <img
                       src={bg}
                       alt="Staff Dashboard"
-                      className="w-50 h-10 "
+                      className="w-50 h-10  "
                     />
                   
                   </div>
@@ -143,7 +143,7 @@ const StaffSection = () => {
                         <span className="inline-flex items-center gap-1">
                           {/* <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> */}
                           <button
-                          className="btn btn-xs sm:btn-sm btn-warning text-black font-semibold rounded-full"
+                          className="btn btn-xs sm:btn-sm btn-outline btn-warning text-black font-semibold rounded-full  outline-amber-500 "
                           onClick={() => navigate("/features")}
                         >
                           Learn more
