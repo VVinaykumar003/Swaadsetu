@@ -35,7 +35,7 @@ function App() {
         <Routes>
           {/* 🌐 Public Routes */}
           <Route path="/" element={<SwaadsetuLanding />} />
-          <Route path="/home" element={<Landing />} />
+          <Route path="/home" element={<Landing />} /> 
           <Route path="/about" element={<About />} />
           <Route path="/features" element={<TabbedCarouselLayout />} />
           <Route path="/blogs" element={<BlogsPage />} />
