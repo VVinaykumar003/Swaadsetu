@@ -7,7 +7,7 @@ import TabbedCarouselLayout from "./pages/webpage/pages/Features";
 import BlogsPage from "./pages/webpage/pages/Blogs";
 import FAQ from "./pages/webpage/pages/FAQ";
 import NewSection from "./pages/webpage/pages/NewSection";
-import PrivatePolicy from "./pages/webpage/pages/PrivatePolicy";
+import PrivatePolicy from "./pages/webpage/pages/PrivatePolicy"; 
 
 // Lazy pages
 const Landing = lazy(() => import("./pages/HomePage"));
@@ -35,7 +35,7 @@ function App() {
         <Routes>
           {/* 🌐 Public Routes */}
           <Route path="/" element={<SwaadsetuLanding />} />
-          <Route path="/home" element={<Landing />} /> 
+          <Route path="/home" element={<Landing />} />  
           <Route path="/about" element={<About />} />
           <Route path="/features" element={<TabbedCarouselLayout />} />
           <Route path="/blogs" element={<BlogsPage />} />
