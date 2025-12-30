@@ -2,6 +2,12 @@
 import bg from "../assets/staffportal.png";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import table from "../assets/TableImagenew.png"
+import order from "../assets/OrderImage.png"
+import Bill from "../assets/BillImage.png"
+import dito from "../assets/DITO.jpeg"
+// import order from "../assets/OrderImageNew.png"
+
 
 
 interface ScreenshotCardProps {
@@ -14,42 +20,42 @@ const StaffSection = () => {
  const screenshots: ScreenshotCardProps[] = [
     {
       imageUrl:
-        "https://get.apicbase.com/wp-content/uploads/2024/10/Apicbase-Restaurant-Management-Software.png",
-      title: "Menu Management",
+        table,
+      title: "Order Management",
       description:
-        "Create and update your menu with items, combos, images, and dietary tags in seconds.",
+        "View,Accept and Reject orders instantly from tables in real-time with complete control over your restaurant’s workflow.",
       link: "/",
     },
     {
       imageUrl:
-        "https://foodship.co.in/wp-content/uploads/2023/05/Order-Management.jpg",
+        order,
       title: "Order Tracking",
       description:
         "Monitor all orders live and track them from pending to delivered.",
     },
     {
       imageUrl:
-        "https://d2xqcz296oofyv.cloudfront.net/wp-content/uploads/2022/04/utility-billing-software-solutions-tridens.jpg",
+        Bill,
       title: "Billing System",
       description:
         "Generate accurate bills with extras, taxes, and discounts supported out-of-the-box.",
     },
     {
       imageUrl:
-        "https://scholarlykitchen.sspnet.org/wp-content/uploads/2015/07/options-analysis1.jpg?w=300",
+        Bill,
       title: "Integrated Kitchen Screen",
       description:
         "A dedicated kitchen view that organizes orders by time and priority, ensuring the chef always knows what to cook next.",
     },
     {
-      imageUrl: "https://resdiary.com/hubfs/Table%20Management%20System.jpg",
+      imageUrl: table,
       title: "Table Management",
       description:
         "Visualise table occupancy, open sessions, and assignments in one place.",
     },
     {
       imageUrl:
-        "https://www.shutterstock.com/shutterstock/photos/1727885581/display_1500/stock-vector-staff-log-in-icon-profile-individual-icon-1727885581.jpg",
+        dito,
       title: "Dine-In vs. Takeout Tabs",
       description:
         `Separate, organized tabs for "Dine-In" and "Takeaway" to help staff prioritize packaging versus table service.`,
@@ -112,7 +118,7 @@ const StaffSection = () => {
                       <img
                         src={screenshot.imageUrl}
                         alt={screenshot.title}
-                        className="h-40 w-full object-cover inset-0 "
+                        className="h-40 w-full  inset-0  object-top-left"
                         loading="lazy"
                       />
                       {/* gradient overlay at bottom of image */}

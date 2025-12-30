@@ -1,6 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import bg from "../assets/adminDashboard.jpeg";
+import image from "../assets/Admin_Image.png";
 
 export function AnalyticsSection() {
     const navigate = useNavigate();
@@ -10,11 +11,11 @@ export function AnalyticsSection() {
         {/* Section Header */}
       <div className="max-w-3xl mx-auto mb-16 text-left md:text-center">
       {/* Label with bg image */}
-      <div className=" flex justify-center items-center mt-10">
+      <div className=" flex justify-center items-center mt-10 object-right">
         <img
           src={bg}
           alt="Admin Dashboard"
-          className="w-50 h-10 "
+          className="w-50 h-10  object-center "
         />
        
       </div>
@@ -44,8 +45,7 @@ export function AnalyticsSection() {
     {/* Dashboard Preview */}
     <div className="relative group rounded-3xl overflow-hidden border border-[#333333] bg-[#0b0b0b]">
       <img
-        src="https://hd.wallpaperswide.com/thumbs/god_of_war_kratos_spartan_warrior_videogame_gaming_greek_god_of_war-t2.jpg"
-        alt="Modern restaurant analytics dashboard displaying sales charts and order statistics"
+        src={image}
         className="w-full h-[460px] md:h-[560px] lg:h-[640px] object-cover block"
       />
 

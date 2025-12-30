@@ -49,7 +49,7 @@ function App() {
           {/* 🧭 Admin Routes */}
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/menu" element={<MenuManagement />} />
-          <Route path="/menu/create" element={<CreateMenu />} />
+          <Route path="/menu/create" element={<CreateMenu/>} />
           <Route path="/menu/edit" element={<EditMenu />} />
           <Route path="/orders" element={<OrdersManagement />} />
           <Route path="/tables" element={<TableManagementPage />} />

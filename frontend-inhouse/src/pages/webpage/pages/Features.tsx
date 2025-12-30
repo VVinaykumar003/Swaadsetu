@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import Navbar from "../component/Navbar";
 import BackButton from "../component/ui/BackButton";
 import { Footer } from "../component/Footer";
+import AdminImage_1 from "../assets/Admin_Image_1.jpeg"
+import AdminImage_2 from "../assets/Admin_Image_2.jpeg"
+import AdminImage_3 from "../assets/Admin_Image_3.jpeg"
+import StaffImage_1 from "../assets/Staff_Image_1.png"
+import StaffImage_2 from "../assets/Staff_Image_2.png"
+import TableImage from "../assets/TableImage.png"
+// import Staff_Image_3 from "../assets/Staff_Image_3.png"
+
+
 
 type Tab = {
   id: string;
@@ -16,9 +25,10 @@ const TABS: Tab[] = [
     id: "tab-1",
     label: "Admin",
     images: [
-      "https://picsum.photos/id/1015/1200/800",
-      "https://picsum.photos/id/1018/1200/800",
-      "https://picsum.photos/id/1025/1200/800",
+        AdminImage_1,
+        AdminImage_2,
+        AdminImage_3,
+     
     ],
     detailLeft: {
       title: "Admin Control",
@@ -48,13 +58,14 @@ const TABS: Tab[] = [
       ],
     },
   },
+
   {
     id: "tab-2",
     label: "Staff",
     images: [
-      "https://picsum.photos/id/1035/1200/800",
-      "https://picsum.photos/id/1040/1200/800",
-      "https://picsum.photos/id/1041/1200/800",
+       StaffImage_1,
+      TableImage,
+      StaffImage_2,
     ],
     detailLeft: {
       title: "Staff Workflow",
@@ -75,6 +86,8 @@ const TABS: Tab[] = [
       ],
     },
   },
+
+
   {
     id: "tab-3",
     label: "User",
@@ -171,7 +184,7 @@ export default function TabbedCarouselLayout(): JSX.Element {
     <div className="min-h-screen bg-black text-white">
       {/* Fixed header */}
       <header className="fixed top-0 left-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
-        <Navbar />
+          <Navbar />
         <div className="px-0 -mx-6 py-2">
           <BackButton />
         </div>
@@ -256,7 +269,7 @@ export default function TabbedCarouselLayout(): JSX.Element {
                     key={images[currentImageIndex]}
                     src={images[currentImageIndex]}
                     alt={`${activeTab.label} ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover transition-opacity duration-700"
+                    className="w-full h-full object-fill transition-opacity duration-700"
                     style={{ opacity: 1 }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
