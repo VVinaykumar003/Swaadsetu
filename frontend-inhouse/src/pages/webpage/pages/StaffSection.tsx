@@ -6,7 +6,6 @@ import table from "../assets/StaffTableImage.png"
 import order from "../assets/OrderImage.png"
 import Bill from "../assets/BillImage.png"
 import dito from "../assets/DITO.jpeg"
-// import order from "../assets/OrderImageNew.png"
 
 
 
