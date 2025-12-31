@@ -2,7 +2,7 @@
 import bg from "../assets/staffportal.png";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import table from "../assets/TableImagenew.png"
+import table from "../assets/StaffTableImage.png"
 import order from "../assets/OrderImage.png"
 import Bill from "../assets/BillImage.png"
 import dito from "../assets/DITO.jpeg"
