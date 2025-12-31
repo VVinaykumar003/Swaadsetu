@@ -43,7 +43,6 @@ function App() {
           <Route path="/hero" element={<NewSection/>}/>
           <Route path="/termsandcondition" element={<PrivatePolicy/>}/>
           
-
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/staff-login" element={<StaffLogin />} />
 
