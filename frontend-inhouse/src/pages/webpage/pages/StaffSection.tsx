@@ -2,10 +2,7 @@
 import bg from "../assets/staffportal.png";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import table from "../assets/StaffTableImage.png"
-import order from "../assets/OrderImage.png"
-import Bill from "../assets/BillImage.png"
-import dito from "../assets/DITO.jpeg"
+import { Images} from "../assets/assets";
 
 
 
@@ -19,7 +16,7 @@ const StaffSection = () => {
  const screenshots: ScreenshotCardProps[] = [
     {
       imageUrl:
-        table,
+       Images.table,
       title: "Order Management",
       description:
         "View,Accept and Reject orders instantly from tables in real-time with complete control over your restaurant’s workflow.",
@@ -27,34 +24,34 @@ const StaffSection = () => {
     },
     {
       imageUrl:
-        order,
+        Images. order,
       title: "Order Tracking",
       description:
         "Monitor all orders live and track them from pending to delivered.",
     },
     {
       imageUrl:
-        Bill,
+         Images.Bill,
       title: "Billing System",
       description:
         "Generate accurate bills with extras, taxes, and discounts supported out-of-the-box.",
     },
     {
       imageUrl:
-        Bill,
+         Images.Bill,
       title: "Integrated Kitchen Screen",
       description:
         "A dedicated kitchen view that organizes orders by time and priority, ensuring the chef always knows what to cook next.",
     },
     {
-      imageUrl: table,
+      imageUrl:  Images.table,
       title: "Table Management",
       description:
         "Visualise table occupancy, open sessions, and assignments in one place.",
     },
     {
       imageUrl:
-        dito,
+         Images.dito,
       title: "Dine-In vs. Takeout Tabs",
       description:
         `Separate, organized tabs for "Dine-In" and "Takeaway" to help staff prioritize packaging versus table service.`,
