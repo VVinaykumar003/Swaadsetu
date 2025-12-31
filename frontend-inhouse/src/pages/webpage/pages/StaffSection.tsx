@@ -15,7 +15,7 @@ interface ScreenshotCardProps {
 const StaffSection = () => {
  const screenshots: ScreenshotCardProps[] = [
     {
-      imageUrl:
+     imageUrl:
        Images.table,
       title: "Order Management",
       description:
@@ -23,34 +23,34 @@ const StaffSection = () => {
       link: "/",
     },
     {
-      imageUrl:
+     imageUrl:
         Images. order,
       title: "Order Tracking",
       description:
         "Monitor all orders live and track them from pending to delivered.",
     },
     {
-      imageUrl:
+     imageUrl:
          Images.Bill,
       title: "Billing System",
       description:
         "Generate accurate bills with extras, taxes, and discounts supported out-of-the-box.",
     },
     {
-      imageUrl:
+     imageUrl:
          Images.Bill,
       title: "Integrated Kitchen Screen",
       description:
         "A dedicated kitchen view that organizes orders by time and priority, ensuring the chef always knows what to cook next.",
     },
     {
-      imageUrl:  Images.table,
+     imageUrl:  Images.table,
       title: "Table Management",
       description:
         "Visualise table occupancy, open sessions, and assignments in one place.",
     },
     {
-      imageUrl:
+     imageUrl:
          Images.dito,
       title: "Dine-In vs. Takeout Tabs",
       description:
