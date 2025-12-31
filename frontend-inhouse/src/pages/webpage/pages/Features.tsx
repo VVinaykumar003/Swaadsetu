@@ -3,8 +3,8 @@ import Navbar from "../component/Navbar";
 import BackButton from "../component/ui/BackButton";
 import { Footer } from "../component/Footer";
 import AdminImage_1 from "../assets/admin-1.jpeg"
-import AdminImage_2 from "../assets/Admin_Image_2.jpeg"
-import AdminImage_3 from "../assets/Admin_Image_3.jpeg"
+import AdminImage_2 from "../assets/admin-2.jpeg"
+import AdminImage_3 from "../assets/admin-3.jpeg"
 import StaffImage_1 from "../assets/Staff_Image_1.png"
 import StaffImage_2 from "../assets/Staff_Image_2.png"
 import TableImage from "../assets/TableImage.png"
