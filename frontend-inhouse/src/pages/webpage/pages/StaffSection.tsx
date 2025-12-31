@@ -24,21 +24,21 @@ const StaffSection = () => {
     },
     {
      imageUrl:
-        Images. order,
+        Images.order,
       title: "Order Tracking",
       description:
         "Monitor all orders live and track them from pending to delivered.",
     },
     {
      imageUrl:
-         Images.Bill,
+         Images.bill,
       title: "Billing System",
       description:
         "Generate accurate bills with extras, taxes, and discounts supported out-of-the-box.",
     },
     {
      imageUrl:
-         Images.Bill,
+         Images.order,
       title: "Integrated Kitchen Screen",
       description:
         "A dedicated kitchen view that organizes orders by time and priority, ensuring the chef always knows what to cook next.",
@@ -114,7 +114,7 @@ const StaffSection = () => {
                       <img
                         src={screenshot.imageUrl}
                         alt={screenshot.title}
-                        className="h-40 w-full  inset-0  object-top-left"
+                        className="h-40 w-full  inset-0  object-center object-contain bg-black"
                         loading="lazy"
                       />
                       {/* gradient overlay at bottom of image */}
