@@ -11,8 +11,8 @@
 // import orderPlacer from "/assets/orderPlacer.png";
 
 import adminImage from "./admin-1.jpeg";
-import adminImage1 from "./admin_image_2.jpeg";
-import adminImage2 from "./admin_image_3.jpeg";
+import adminImage1 from "./admin-2.jpeg";
+import adminImage2 from "./admin-3.jpeg";
 import bill from './Bill.jpeg'
 import table from "./StaffTableImage.png"
 import order from "./OrderImage.png"
