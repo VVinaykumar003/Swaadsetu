@@ -1,7 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import bg from "../assets/adminDashboard.jpeg";
-import image from "../assets/Admin_Image.png";
+import image from "../assets/AdminImage.png";
 
 export function AnalyticsSection() {
     const navigate = useNavigate();
