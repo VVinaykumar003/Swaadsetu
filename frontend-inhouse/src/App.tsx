@@ -8,7 +8,9 @@ import BlogsPage from "./pages/webpage/pages/Blogs";
 import FAQ from "./pages/webpage/pages/FAQ";
 import NewSection from "./pages/webpage/pages/NewSection";
 import PrivatePolicy from "./pages/webpage/pages/PrivatePolicy";
- 
+
+
+
 
 // Lazy pages
 const Landing = lazy(() => import("./pages/HomePage"));
