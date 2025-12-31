@@ -10,7 +10,7 @@
 // import mobileOrderBanner from "/assets/mobileOrderBanner.png";
 // import orderPlacer from "/assets/orderPlacer.png";
 
-import adminImage from "./admin_image_1.jpeg";
+import adminImage from "./admin-1.jpeg";
 import adminImage1 from "./admin_image_2.jpeg";
 import adminImage2 from "./admin_image_3.jpeg";
 import bill from './Bill.jpeg'
