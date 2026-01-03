@@ -116,25 +116,24 @@ export function Footer() {
             <h3 className="text-lg font-semibold font-heading mb-6">Contact</h3>
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
-                <Mail size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
+                <Mail size={20} className="text-[#FFBE00] mt-1 shrink-0" />
                 <span className="text-[#EDEDED]">connect@swaadsetu.com</span>
               </li>
               <li className="flex items-start space-x-3">
-                <Phone size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
+                <Phone size={20} className="text-[#FFBE00] mt-1 shrink-0" />
                 <span className="text-[#EDEDED]">+91 9407655717</span>
               </li>
               <li className="flex items-start space-x-3">
-                <MapPin size={20} className="text-[#FFBE00] mt-1 flex-shrink-0" />
+                <MapPin size={20} className="text-[#FFBE00] mt-1 shrink-0" />
                 <span className="text-[#EDEDED]">Zager Digital Services,  <br/> Startup Enclave ,
                   <br/>CSIT Durg, <br/> Chhattisgarh 491001</span>
               </li>
             </ul>
           </div>
         </div>
-
-        {/* Bottom Bar */}
+    {/* Bottom Bar */}
      <div className="border-t border-[#333333] pt-8">
-  <div className="flex flex-col md:flex-row justify-center items-center">
+     <div className="flex flex-col md:flex-row justify-center items-center">
     <div
       className="
         grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5
@@ -199,6 +198,7 @@ export function Footer() {
         </div>
 
       </div >
+    
       </div>
     </footer>
   )

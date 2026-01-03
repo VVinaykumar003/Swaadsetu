@@ -6,6 +6,8 @@ import { CustomerSection } from "./customer-section";
 import { AnalyticsSection } from "./AnalyticsSection";
 import Navbar from "../component/Navbar";
 import AboutSection from "./AboutSection";
+
+import { Helmet } from "@dr.pogodin/react-helmet";
 // import MobileFloatingButton from "../component/ui/MobileFolatingButton";
 import StaffSection from "../pages/StaffSection";
 
@@ -60,6 +62,32 @@ const SwaadsetuLanding: React.FC = () => {
   }, []);
 
   return (
+   <>
+     <Helmet>
+      <title>Swaad Setu - Revolutionize Your Restaurant's Ordering Experience</title>
+      <meta
+        name="description"
+        content="Swaad Setu is a cloud-based SaaS and India’s leading QR code ordering platform helping restaurants enhance customer experience, manage orders efficiently, and grow faster."
+      />
+
+      <meta name="keywords" content="SwaadSetu, smart ordering, restaurant management, call waiter, live bill updates, scan & order" />
+        <meta name="author" content="Zager" />
+      {/* Open Graph / Social */}
+      <meta property="og:title" content="Swaad Setu - Revolutionize Your Restaurant's Ordering Experience" />
+      <meta property="og:description" content="Swaad Setu is a cloud-based SaaS and India’s leading QR code ordering platform helping restaurants enhance customer experience, manage orders efficiently, and grow faster." />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content="https://www.swaadsetu.com" />
+      <meta property="og:image" content="https://www.swaadsetu.com/logo.png" />
+
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Swaad Setu - Revolutionize Your Restaurant's Ordering Experience" />
+      <meta name="twitter:description" content="Swaad Setu is a cloud-based SaaS and India’s leading QR code ordering platform helping restaurants enhance customer experience, manage orders efficiently, and grow faster." />
+      <meta name="twitter:image" content="https://www.swaadsetu.com/logo.png" />
+
+    </Helmet>
+
+    
     <div className="font-sans bg-radial from-yellow-100 from-20% via-white to-yellow-100 text-black overflow-x-hidden scroll-smooth">
       {/* Navigation */}
 
@@ -152,6 +180,7 @@ const SwaadsetuLanding: React.FC = () => {
         }
       `}</style>
     </div>
+    </>
   );
 };
 

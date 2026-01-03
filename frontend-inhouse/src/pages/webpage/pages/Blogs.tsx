@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Navbar from "../component/Navbar";
 import { Footer } from "../component/Footer";
 import BackButton from "../component/ui/BackButton";
+import { Helmet} from "@dr.pogodin/react-helmet"
 
 type BlogCategory = "All" | "Product" | "Design" | "Restaurants" | "Updates";
 
@@ -100,6 +101,27 @@ const CATEGORIES: BlogCategory[] = ["All", "Product", "Design", "Restaurants", "
       }, []);
 
   return (
+    <>
+        <Helmet>
+  <title>Swaad Setu Blog – Insights for Modern Restaurant Teams</title>
+  <meta
+    name="description"
+    content="Explore product updates, practical guides, and stories from restaurants using Swaad Setu to grow faster and serve better."
+  />
+
+  {/* Open Graph / Social */}
+  <meta property="og:title" content="Swaad Setu Blog – Insights for Modern Restaurant Teams" />
+  <meta property="og:description" content="Explore product updates, practical guides, and stories from restaurants using Swaad Setu to grow faster and serve better." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.swaadsetu.com/blogs" />
+  <meta property="og:image" content="https://www.swaadsetu.com/logo.png" />
+
+  {/* Twitter */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Swaad Setu Blog – Insights for Modern Restaurant Teams" />
+  <meta name="twitter:description" content="Explore product updates, practical guides, and stories from restaurants using Swaad Setu to grow faster and serve better." />
+  <meta name="twitter:image" content="https://www.swaadsetu.com/logo.png" />
+</Helmet>
     <div className="min-h-screen bg-white text-black">
       <Navbar />
       <div className=" mb-8 absoute ">
@@ -214,6 +236,7 @@ const CATEGORIES: BlogCategory[] = ["All", "Product", "Design", "Restaurants", "
       </section>
       <Footer />
     </div>
+    </>
   );
 };
 

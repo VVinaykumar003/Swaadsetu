@@ -31,7 +31,7 @@ const StaffSection = () => {
     },
     {
      imageUrl:
-         Images.bill,
+         Images.billImage,
       title: "Billing System",
       description:
         "Generate accurate bills with extras, taxes, and discounts supported out-of-the-box.",

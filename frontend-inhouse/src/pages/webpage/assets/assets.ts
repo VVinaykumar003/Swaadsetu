@@ -15,14 +15,31 @@ import adminImage1 from "./admin-2.jpeg";
 import adminImage2 from "./admin-3.jpeg";
 import bill from './Bill.jpeg'
 import table from "./StaffTableImage.png"
-import order from "./orderimage.png"
-import billImage from "./billimage.png"
+import order from "./orderImage.png"
+import billImage from "./billImage.jpeg"
 import dito from "./DITO.jpeg"
+import aboutHome from "./aboutHome.png";
+import adminI from "./AdminImage.png";
+
+
+// about Page images
+import billImage2 from "./billImage.jpeg"
+import scanner from "./tablescaner.jpeg"
+import orderI from "./order-1.jpeg"
+import admin from "./admin-4.jpeg"
+import tableView from "./TableImage.png"
 
 // Updated Images object:
 export const Images = {
   // Your existing 8:
   adminImage, adminImage2, adminImage1, bill, table, order, billImage, dito,
+  aboutHome,
+  
+  //About Page Images
+  billImage2,scanner,orderI, admin,tableView,
+
+  //
+  adminI,
   
   // + these 10 new:
   // logoNew, staff1, staff2, userTable, customerHeader,

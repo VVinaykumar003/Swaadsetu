@@ -1,7 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import bg from "../assets/adminDashboard.jpeg";
-import image from "../assets/AdminImage.png";
+import {Images} from "../assets/assets";
 
 
 export function AnalyticsSection() {
@@ -46,11 +46,11 @@ export function AnalyticsSection() {
     {/* Dashboard Preview */}
     <div className="relative group rounded-3xl overflow-hidden border border-[#333333] bg-[#0b0b0b]">
       <img
-        src={image}
-        className="w-full h-[460px] md:h-[560px] lg:h-[640px] object-cover block"
+        src={Images.adminI}
+        className="w-full h-115 md:h-140 lg:h-160 object-cover block"
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-t from-black/10 via-black/45 to-transparent pointer-events-none" />
 
       <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6 z-20 opacity-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 group-hover:pointer-events-auto">
         <div className="w-full max-w-md text-center">

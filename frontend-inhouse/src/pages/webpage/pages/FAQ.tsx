@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState ,useEffect } from "react";
 import { faqData } from "../component/FAQ"; // adjust path
 import Navbar from "../component/Navbar";
 import { Footer } from "../component/Footer";
+import { Helmet } from "@dr.pogodin/react-helmet";
 
 type CategoryId =
   | "general"
@@ -48,10 +49,34 @@ const FAQ: React.FC = () => {
 
   const activeCategoryData = faqData.find(c => c.id === activeCategory);
 
-
+   /* 🔥 GUARANTEED SCROLL TO TOP */
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, []);
 
 
   return (
+    <>
+     <Helmet>
+        <title>Swaad Setu FAQ – Everything About Our QR Ordering Platform</title>
+        <meta
+          name="description"
+          content="Find answers to all questions about Swaad Setu's QR-based ordering platform, features, setup, and more."
+        />
+
+        {/* Open Graph / Social */}
+        <meta property="og:title" content="Swaad Setu FAQ – Everything About Our QR Ordering Platform" />
+        <meta property="og:description" content="Find answers to all questions about Swaad Setu's QR-based ordering platform, features, setup, and more." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.swaadsetu.com/faq" />
+        <meta property="og:image" content="https://www.swaadsetu.com/logo.png" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Swaad Setu FAQ – Everything About Our QR Ordering Platform" />
+        <meta name="twitter:description" content="Find answers to all questions about Swaad Setu's QR-based ordering platform, features, setup, and more." />
+        <meta name="twitter:image" content="https://www.swaadsetu.com/logo.png" />
+      </Helmet>
     <div className="bg-[#fffef8] text-[#1a1a1a] min-h-screen">
       {/* Header */}
    
@@ -185,6 +210,7 @@ const FAQ: React.FC = () => {
 
       <Footer/>
     </div>
+    </>
   );
 };
 

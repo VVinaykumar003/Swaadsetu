@@ -3,6 +3,7 @@ import { LayoutGrid } from "../component/LayoutGrid";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import bg from "../assets/About.png";
+import {Images } from "../assets/assets";
 
 const AboutSection = () => {
 
@@ -36,19 +37,19 @@ const SkeletonTwo = () => {
   );
 };
 
-const SkeletonThree = () => {
-  return (
-    <div className="space-y-3">
-      <p className="font-bold md:text-4xl text-2xl text-white">
-        Greens all over
-      </p>
-      <p className="font-normal text-base my-2 max-w-lg text-neutral-200">
-        A house surrounded by greenery and nature&apos;s beauty. It&apos;s the
-        perfect place to relax, unwind, and enjoy life.
-      </p>
-    </div>
-  );
-};
+// const SkeletonThree = () => {
+//   return (
+//     <div className="space-y-3">
+//       <p className="font-bold md:text-4xl text-2xl text-white">
+//         Greens all over
+//       </p>
+//       <p className="font-normal text-base my-2 max-w-lg text-neutral-200">
+//         A house surrounded by greenery and nature&apos;s beauty. It&apos;s the
+//         perfect place to relax, unwind, and enjoy life.
+//       </p>
+//     </div>
+//   );
+// };
 
 const SkeletonFour = () => {
   return (
@@ -79,19 +80,18 @@ const SkeletonFour = () => {
       thumbnail:
         "https://images.unsplash.com/photo-1464457312035-3d7d0e0c058e?q=80&w=1200&auto=format&fit=crop",
     },
-    {
-      id: 3,
-      content: <SkeletonThree />,
-      className: "col-span-1",
-      thumbnail:
-        "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=1200&auto=format&fit=crop",
-    },
+    // {
+    //   id: 3,
+    //   content: <SkeletonThree />,
+    //   className: "col-span-1",
+    //   thumbnail:
+    //     "https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?q=80&w=1200&auto=format&fit=crop",
+    // },
     {
       id: 4,
       content: <SkeletonFour />,
-      className: "md:col-span-2",
-      thumbnail:
-        "https://images.unsplash.com/photo-1475070929565-c985b496cb9f?q=80&w=1200&auto=format&fit=crop",
+      className: "md:col-span-3",
+      thumbnail:Images.aboutHome,
     },
   ];
    const navigate = useNavigate(); 
@@ -104,7 +104,7 @@ const SkeletonFour = () => {
         {/* Two-column layout: FIXED RESPONSIVE GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto ">
           {/* Left: Image grid - FIXED CONTAINER */}
-          <motion.div className="w-full h-[600px]  lg:h-[800px] bg-radial from-yellow-100 from-20% via-white to-yellow-100 rounded-3xl p-6 flex items-center justify-center relative overflow-hidden ">
+          <motion.div className="w-full h-150  lg:h-200 bg-radial from-yellow-100 from-20% via-white to-yellow-100 rounded-3xl p-6 flex items-center justify-center relative overflow-hidden ">
             <LayoutGrid cards={cards} />
           </motion.div>
 

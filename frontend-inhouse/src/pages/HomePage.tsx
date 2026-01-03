@@ -2,7 +2,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ShoppingCart, User, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import bg from "../assets/logo3.png"
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams ,Link } from "react-router-dom";
+import Logo from '../pages/webpage/assets/Final_Logo_White.png'
 // import { getRestaurantByRid } from "../api/restaurant.api";
 // import { useTenant } from "../context/TenantContext";
 
@@ -53,7 +54,7 @@ export default function LandingModern() {
     sm:max-w-sm md:max-w-md lg:max-w-lg
     h-28
     sm:h-36 md:h-40 lg:h-44
-    bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600
+    bg-linear-to-br from-yellow-200 via-yellow-400 to-yellow-600
     border border-yellow-300/50
     flex flex-col items-center justify-center gap-2
     rounded-2xl
@@ -64,7 +65,7 @@ export default function LandingModern() {
   "
 >
   {/* glossy overlay */}
-  <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-80 px-1" />
+  <div className="absolute inset-0 bg-linear-to-br from-white/40 via-transparent to-transparent opacity-80 px-1" />
 
   {/* icon */}
   <div
@@ -86,7 +87,7 @@ export default function LandingModern() {
       font-bold text-black drop-shadow-sm
       px-3 py-1 rounded-2xl
       text-xs
-      [font-size:clamp(0.7rem,2.8vw,0.95rem)]
+      [text-clamp(0.7rem,2.8vw,0.95rem)]
       sm:text-sm md:text-base lg:text-lg
       text-center
     "
@@ -129,7 +130,7 @@ export default function LandingModern() {
         </div>
 
          <div className="flex items-center gap-2">
-          <span className="h-[6px] w-[6px] rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]" />
           <span>Live System</span>
         </div>
        
@@ -179,9 +180,80 @@ export default function LandingModern() {
           />
         </section>
 
-        <footer className="lg:mt-30 border-t border-[rgba(255,255,255,0.05)] py-10 text-center">
-          © {new Date().getFullYear()} Swaad Setu •A Product By Zager 
-        </footer>
+         <footer className="w-full border-t border-[#333333] mt-10">
+        <div className="mx-auto w-full max-w-6xl px-4 py-10">
+          {/* Top links row */}
+          <div className="flex flex-col md:flex-row justify-center items-center">
+            <div
+              className="
+                grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5
+                gap-x-6 gap-y-3
+                place-items-center w-full
+              "
+            >
+              <Link
+                to="/web"
+                className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors"
+              >
+                Home
+              </Link>
+              <Link
+                to="#"
+                className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors"
+              >
+                Contact
+              </Link>
+              <Link
+                to="/termsandcondition"
+                className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                to="/termsandcondition"
+                className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                to="/termsandcondition"
+                className="text-sm text-[#888888] hover:text-[#FFBE00] transition-colors"
+              >
+                Cookie Policy
+              </Link>
+            </div>
+          </div>
+
+          {/* Logo + copyright */}
+          <div className="border-t border-[#333333] pt-8 mt-8 flex flex-col items-center gap-3">
+            <button onClick={() => navigate("/web")}>
+              <img src={Logo} className="w-44 h-11" />
+            </button>
+
+            <div className="hidden md:flex flex-col items-center">
+              <button onClick={() => navigate("/web")}>
+                <p className="text-sm text-[#888888]">
+                  Swaad Setu – A Product By
+                </p>
+                <p className="text-sm ml-1.5">
+                  © {new Date().getFullYear()} Zager Digital Services Pvt. Ltd.
+                </p>
+              </button>
+            </div>
+
+            <div className="md:hidden">
+              <button onClick={() => navigate("/web")}>
+                <p className="text-sm text-[#888888]">
+                  Swaad Setu – A Product By
+                </p>
+                <p className="text-sm ml-1.5">
+                  © 2025 Zager Digital Services Pvt. Ltd.
+                </p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
       </main>
     </div>
   );

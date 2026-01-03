@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+Disallow: /t/
+
+Sitemap: https://www.swaadsetu.com/sitemap.xml
