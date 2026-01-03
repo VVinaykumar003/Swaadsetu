@@ -15,7 +15,7 @@ import adminImage1 from "./admin-2.jpeg";
 import adminImage2 from "./admin-3.jpeg";
 import bill from './Bill.jpeg'
 import table from "./StaffTableImage.png"
-import order from "./OrderImage.png"
+import order from "./OrderImage.png" 
 import billImage from "./billImage.jpeg"
 import dito from "./DITO.jpeg"
 import aboutHome from "./aboutHome.png";
