@@ -60,7 +60,7 @@ export function CustomerSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-20">
         <div className="space-y-6">
           <div>
-            <img src={Images.custmHeading} className="h-auto w-60" alt="Customers heading" />
+            <img src={Images.custmHeading} className="h-auto w-60" alt="Customers heading" loading="lazy" />
           </div>
 
           <div className="flex flex-col gap-12 lg:flex-row lg:items-center">
@@ -141,6 +141,7 @@ export function CustomerSection() {
                             src={src}
                             alt={`Customer view ${i + 1}`}
                             className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
                           />
                         </button>
                       </div>
@@ -166,6 +167,7 @@ export function CustomerSection() {
                             src={src}
                             alt={`Customer view ${i + 1}`}
                             className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
                           />
                         </button>
                       </div>

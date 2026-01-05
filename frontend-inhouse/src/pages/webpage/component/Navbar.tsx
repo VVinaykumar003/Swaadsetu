@@ -49,6 +49,7 @@ const Navbar = () => {
             alt="Swaadsetu Logo"
             onClick={() => navigate("/web")}
             className="h-8 sm:h-10 w-auto object-contain cursor-pointer lg:-ml-9 -ml-4"
+            loading="lazy"
           />
 
           {/* desktop links */}

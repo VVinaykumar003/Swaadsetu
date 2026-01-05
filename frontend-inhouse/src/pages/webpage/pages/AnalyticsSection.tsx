@@ -16,6 +16,7 @@ export function AnalyticsSection() {
           src={Images.adminheading}
           alt="Admin Dashboard"
           className="w-50 h-10  object-center "
+          loading="lazy"
         />
        
       </div>
@@ -47,6 +48,7 @@ export function AnalyticsSection() {
       <img
         src={Images.adminI}
         className="w-full h-115 md:h-140 lg:h-160 object-cover block"
+        loading="lazy"
       />
 
       <div className="absolute inset-0 bg-linear-to-t from-black/10 via-black/45 to-transparent pointer-events-none" />

@@ -118,7 +118,7 @@ const SkeletonFour = () => {
                     src={Images.aboutheading}
                     alt="About Swaad Setu"
                     className="w-60 h-auto object-cover mix-blend-multiply"
-                   
+                   loading="lazy"
                   />
 
                 

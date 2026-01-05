@@ -77,6 +77,7 @@ const StaffSection = () => {
                       src={Images.staffheading}
                       alt="Staff Dashboard"
                       className="w-50 h-10  "
+                      loading="lazy"
                     />
                   
                   </div>

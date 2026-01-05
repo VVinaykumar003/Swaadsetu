@@ -16,7 +16,9 @@ export function Footer() {
             <div className="flex items-center space-x-6">
                <div className="mt-2">
                 <button onClick={() => navigate('/web')}>
-                <img src={Images.FooterLogo} className="w-55 h-10"/>
+                <img src={Images.FooterLogo} className="w-55 h-10"
+                loading="lazy"
+                />
                 </button>
              </div>
             </div>
@@ -178,7 +180,9 @@ export function Footer() {
       <div className="border-t border-[#333333] pt-8 mt-5  justify-center items-center gap-3 flex flex-col " >
         <div>
           <button onClick={() => navigate('/web')}>
-          <img src={Images.Logo} className="w-40 h-10"/>
+          <img src={Images.Logo} className="w-40 h-10"
+          loading="lazy"
+          />
           </button>
         </div>
 

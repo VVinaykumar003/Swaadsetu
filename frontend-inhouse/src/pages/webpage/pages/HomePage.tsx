@@ -98,6 +98,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                     src={item.image}
                     alt={item.name}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                    loading="lazy"
                   />
                   <div className="absolute top-4 right-4 bg-yellow-400 text-black px-3 py-1 rounded-full font-bold text-sm">
                     ₹{item.price}
@@ -149,6 +150,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                       src={combo.image}
                       alt={combo.name}
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                      loading="lazy"
                     />
                   </div>
                   <div className="md:w-1/2 p-8">

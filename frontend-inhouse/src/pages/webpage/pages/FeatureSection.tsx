@@ -6,11 +6,11 @@ const BlissBayLanding: React.FC = () => {
       {/* Top Bar */}
       <nav className="top-nav px-[5%] py-8 flex items-center justify-between text-[0.7rem] tracking-[0.2em] uppercase text-[#888888]">
         <div className="flex items-center gap-2">
-          <img src={bg} className="w-40 h-10 left-1.5 "/>
+          <img src={bg} className="w-40 h-10 left-1.5 " loading="lazy" />
         </div>
 
          <div className="flex items-center gap-2">
-          <span className="h-[6px] w-[6px] rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]" />
+          <span className="h-1.5 w-15 rounded-full bg-[#00ff88] shadow-[0_0_10px_#00ff88]" />
           <span>Live System</span>
         </div>
        

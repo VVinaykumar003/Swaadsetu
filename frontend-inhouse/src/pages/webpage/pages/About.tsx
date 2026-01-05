@@ -125,11 +125,13 @@ const About: FC = () => {
                   src={Images.orderI}
                   className="rounded-3xl shadow-md object-cover"
                   alt="Modern restaurant kitchen display screens"
+                  loading="lazy"
                 />
                 <img
                   src={Images.admin}
                   className="rounded-3xl shadow-md object-cover"
                   alt="Admin dashboard with analytics"
+                  loading="lazy"
                 />
               </motion.div>
 
@@ -144,11 +146,13 @@ const About: FC = () => {
                   src={Images.scanner}
                   className="rounded-3xl shadow-md object-cover object-center  h-auto"
                   alt="QR menu on restaurant table"
+                  loading="lazy"
                 />
                 <img
                   src={Images.table}
                   className="rounded-3xl shadow-md object-cover"
                   alt="Staff tablet managing orders"
+                  loading="lazy"
                 />
               </motion.div>
 
@@ -163,6 +167,7 @@ const About: FC = () => {
                   src="https://placehold.co/280x260?text=Customer+Experience"
                   className="rounded-3xl shadow-md object-cover"
                   alt="Customer using QR ordering"
+                  loading="lazy"
                 />
               </motion.div>
             </div>

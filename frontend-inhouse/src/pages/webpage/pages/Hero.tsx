@@ -61,6 +61,7 @@ const Hero = () => {
           src={Images.pcImage}
           alt="Hero banner"
           className="w-full h-full max-h-screen object-cover object-center"
+          loading="lazy"
         />
       </div>
 
@@ -72,6 +73,7 @@ const Hero = () => {
           alt="Mobile hero banner"
           className="w-full h-auto max-h-[80vh] object-cover mx-auto mt-9 sm:mt-15"
           style={{ objectPosition: "center" }}
+          loading="lazy"
         />
       </div>
 

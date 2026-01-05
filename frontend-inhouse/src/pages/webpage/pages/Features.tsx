@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import Navbar from "../component/Navbar";
 import BackButton from "../component/ui/BackButton";
 import { Footer } from "../component/Footer";
@@ -265,8 +265,9 @@ export default function TabbedCarouselLayout(): JSX.Element {
                     alt={`${activeTab.label} ${currentImageIndex + 1}`}
                     className="w-full h-full object-fill transition-opacity duration-700"
                     style={{ opacity: 1 }}
+                    loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent" />
                 </div>
 
                 {/* Prev/Next */}
