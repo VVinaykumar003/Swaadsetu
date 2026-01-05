@@ -19,7 +19,7 @@ import order from "./OrderImage.png"
 import billImage from "./billImage.jpeg"
 import dito from "./DITO.jpeg"
 import aboutHome from "./aboutHome.png";
-import adminI from "./AdminImage.png";
+import adminI from "./adminImage.png";
 
 
 // about Page images
