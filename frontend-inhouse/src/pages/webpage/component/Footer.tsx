@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom"
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react"
-import Logo from '../assets/Final_Logo_White.png'
-import FooterLogo from '../assets/Logo.png'
+import {Images} from "../assets/assets"
 import { useNavigate } from "react-router-dom"
 
 
@@ -17,7 +16,7 @@ export function Footer() {
             <div className="flex items-center space-x-6">
                <div className="mt-2">
                 <button onClick={() => navigate('/web')}>
-                <img src={FooterLogo} className="w-55 h-10"/>
+                <img src={Images.FooterLogo} className="w-55 h-10"/>
                 </button>
              </div>
             </div>
@@ -179,7 +178,7 @@ export function Footer() {
       <div className="border-t border-[#333333] pt-8 mt-5  justify-center items-center gap-3 flex flex-col " >
         <div>
           <button onClick={() => navigate('/web')}>
-          <img src={Logo} className="w-40 h-10"/>
+          <img src={Images.Logo} className="w-40 h-10"/>
           </button>
         </div>
 

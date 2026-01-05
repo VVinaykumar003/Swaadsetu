@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Navbar from "../component/Navbar";
 import BackButton from "../component/ui/BackButton";
 import { Footer } from "../component/Footer";
-import AdminImage_1 from "../assets/admin-1.jpeg"
-import AdminImage_2 from "../assets/admin-2.jpeg"
-import AdminImage_3 from "../assets/admin-3.jpeg"
-import StaffImage_1 from "../assets/Staff_Image_1.png"
-import StaffImage_2 from "../assets/Staff_Image_2.png"
-import TableImage from "../assets/TableImage.png"
-// import Staff_Image_3 from "../assets/Staff_Image_3.pn
+import { Images } from "../assets/assets";
 
 
 
@@ -25,9 +19,9 @@ const TABS: Tab[] = [
     id: "tab-1",
     label: "Admin",
     images: [
-        AdminImage_1,
-        AdminImage_2,
-        AdminImage_3,
+        Images.AdminImage_1,
+        Images.AdminImage_2,
+        Images.AdminImage_3,
      
     ],
     detailLeft: {
@@ -63,9 +57,9 @@ const TABS: Tab[] = [
     id: "tab-2",
     label: "Staff",
     images: [
-       StaffImage_1,
-      TableImage,
-      StaffImage_2,
+       Images.StaffImage_1,
+     Images. TableImage,
+     Images. StaffImage_2,
     ],
     detailLeft: {
       title: "Staff Workflow",

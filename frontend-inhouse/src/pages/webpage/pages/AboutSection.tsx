@@ -2,7 +2,6 @@ import { Check,} from "lucide-react";
 import { LayoutGrid } from "../component/LayoutGrid";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import bg from "../assets/About.png";
 import {Images } from "../assets/assets";
 
 const AboutSection = () => {
@@ -71,14 +70,13 @@ const SkeletonFour = () => {
       content: <SkeletonOne />,
       className: "md:col-span-2",
       thumbnail:
-        "https://images.unsplash.com/photo-1476231682828-37e571bc172f?q=80&w=3474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        Images.StaffDashboard,
     },
     {
       id: 2,
       content: <SkeletonTwo />,
       className: "col-span-1",
-      thumbnail:
-        "https://images.unsplash.com/photo-1464457312035-3d7d0e0c058e?q=80&w=1200&auto=format&fit=crop",
+      thumbnail:Images.ui,
     },
     // {
     //   id: 3,
@@ -117,7 +115,7 @@ const SkeletonFour = () => {
                 <div className="  w-60 h-auto ml-3  md:w-60 ">
                   {/* Background image */}
                   <img
-                    src={bg}
+                    src={Images.aboutheading}
                     alt="About Swaad Setu"
                     className="w-60 h-auto object-cover mix-blend-multiply"
                    

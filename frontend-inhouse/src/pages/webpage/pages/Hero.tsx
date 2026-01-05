@@ -1,30 +1,22 @@
 import { useEffect, useState } from "react";
-import Image from "../assets/DesktopBanner.png";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import mobileImage from "../assets/new_mobile_banner.png";
+import { Images } from "../assets/assets";
 
 
-const shapeVariants = {
-  initial: { scale: 0, opacity: 0 },
-  animate: { scale: 1, opacity: 1, rotate: 360 },
-};
+// const shapeVariants = {
+//   initial: { scale: 0, opacity: 0 },
+//   animate: { scale: 1, opacity: 1, rotate: 360 },
+// };
 
-const transitionSettings = {
-  duration: 2,
-  repeat: Infinity,
-  ease: "easeInOut",
-  repeatDelay: 1,
-};
+// const transitionSettings = {
+//   duration: 2,
+//   repeat: Infinity,
+//   ease: "easeInOut",
+//   repeatDelay: 1,
+// };
 
-const shapes = [
-  { type: "circle", top: "11.2%", left: "9%", size: 12, delay: 0 },
-  // { type: "square", top: "30%", left: "70%", size: 14, delay: 0.5 },
-  // { type: "circle", top: "60%", left: "40%", size: 10, delay: 1 },
-  // { type: "square", top: "80%", left: "85%", size: 16, delay: 1.5 },
-  // { type: "circle", top: "20%", left: "80%", size: 10, delay: 2 },
-  // { type: "square", top: "50%", left: "20%", size: 12, delay: 2.5 },
-];
+
 
 // simple counter
 const Counter = ({ target, label }: { target: number; label: string }) => {
@@ -66,7 +58,7 @@ const Hero = () => {
       {/* Desktop banner (md+) */}
       <div className="hidden md:block w-full h-full md:mt-3">
         <img
-          src={Image}
+          src={Images.pcImage}
           alt="Hero banner"
           className="w-full h-full max-h-screen object-cover object-center"
         />
@@ -76,7 +68,7 @@ const Hero = () => {
      {/* Mobile banner */}
       <div className="w-full block md:hidden">
         <img
-          src={mobileImage}
+          src={Images.mobileImage}
           alt="Mobile hero banner"
           className="w-full h-auto max-h-[80vh] object-cover mx-auto mt-9 sm:mt-15"
           style={{ objectPosition: "center" }}
@@ -157,7 +149,7 @@ const Hero = () => {
       </div>
 
       {/* Animated shapes (unchanged) */}
-      {shapes.map(({ type, top, left, size, delay }, index) => (
+      {/* {shapes.map(({ type, top, left, size, delay }, index) => (
         <motion.div
           key={index}
           initial="initial"
@@ -179,7 +171,7 @@ const Hero = () => {
           className="hidden sm:block"
           aria-hidden="true"
         />
-      ))}
+      ))} */}
     </section>
     //changes done by 
   );

@@ -1,6 +1,5 @@
 
 import { useNavigate } from "react-router-dom";
-import bg from "../assets/adminDashboard.jpeg";
 import {Images} from "../assets/assets";
 
 
@@ -14,7 +13,7 @@ export function AnalyticsSection() {
       {/* Label with bg image */}
       <div className=" flex justify-center items-center mt-10 object-right">
         <img
-          src={bg}
+          src={Images.adminheading}
           alt="Admin Dashboard"
           className="w-50 h-10  object-center "
         />

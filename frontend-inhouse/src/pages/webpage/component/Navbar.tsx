@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Logo from "../assets/logo3.png";
+import { Images } from "../assets/assets";
 import { Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,7 +45,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between py-3">
           {/* logo */}
           <img
-            src={Logo}
+            src={Images.swadLogo}
             alt="Swaadsetu Logo"
             onClick={() => navigate("/web")}
             className="h-8 sm:h-10 w-auto object-contain cursor-pointer lg:-ml-9 -ml-4"

@@ -1,5 +1,3 @@
-
-import bg from "../assets/staffportal.png";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Images} from "../assets/assets";
@@ -76,7 +74,7 @@ const StaffSection = () => {
 
                  <div className=" flex justify-center items-center mt-10 top-0 bottom-0 left-4">
                     <img
-                      src={bg}
+                      src={Images.staffheading}
                       alt="Staff Dashboard"
                       className="w-50 h-10  "
                     />

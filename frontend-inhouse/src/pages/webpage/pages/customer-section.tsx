@@ -7,13 +7,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-
-import Bill from "../assets/Bill.jpeg";
-import placeOrder from "../assets/placeorder.jpeg";
-import orderStatus from "../assets/orderStatus.jpeg";
-import custDetails from "../assets/custmDetails.jpeg";
-import userFront from "../assets/userFrot.jpeg";
-import bg from "../assets/customerHeading.png";
+import {Images} from "../assets/assets";
 import ScrollableMobileMockup from "../component/ScrollableMobileMockup";
 
 const features = [
@@ -54,7 +48,7 @@ const features = [
   },
 ];
 
-const galleryImages = [userFront, placeOrder, Bill, orderStatus, custDetails];
+const galleryImages = [Images.userFront, Images.placeOrder, Images.Bill, Images.orderStatus, Images.custDetails];
 
 export function CustomerSection() {
   const navigate = useNavigate();
@@ -66,7 +60,7 @@ export function CustomerSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-20">
         <div className="space-y-6">
           <div>
-            <img src={bg} className="h-auto w-60" alt="Customers heading" />
+            <img src={Images.custmHeading} className="h-auto w-60" alt="Customers heading" />
           </div>
 
           <div className="flex flex-col gap-12 lg:flex-row lg:items-center">

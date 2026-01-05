@@ -6,9 +6,9 @@ import {
   useInView,
 } from "framer-motion";
 import { animate } from "motion";
-import Image from "../assets/heroImage.png";
 import { FlipWords } from "../component/ui/Flipwords";
 import { useNavigate } from "react-router-dom";
+
 
 /* -------------------- COUNTER COMPONENT -------------------- */
 
