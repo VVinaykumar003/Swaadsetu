@@ -113,11 +113,11 @@ const StaffSection = () => {
                       <img
                         src={screenshot.imageUrl}
                         alt={screenshot.title}
-                        className="h-40 w-full  inset-0  object-center object-contain bg-black"
+                        className="h-40 w-full  inset-0 object-fill   bg-black"
                         loading="lazy"
                       />
                       {/* gradient overlay at bottom of image */}
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/60 to-transparent" />
                       {/* small pill tag */}
                       <span className="absolute top-3 left-3 rounded-full bg-black/70 px-3 py-1 text-[11px] text-amber-300 uppercase tracking-wide">
                         Preview

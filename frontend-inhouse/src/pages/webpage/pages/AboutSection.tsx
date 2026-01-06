@@ -144,7 +144,7 @@ const SkeletonFour = () => {
                     "Advanced analytics and business intelligence",
                   ].map((feature, index) => (
                     <div key={index} className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-[#FFBE00] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-[#FFBE00] rounded-full flex items-center justify-center shrink-0 mt-0.5">
                         <Check size={16} className="text-black" />
                       </div>
                       <span className="text-[#111111] font-medium">
