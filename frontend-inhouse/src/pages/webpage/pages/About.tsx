@@ -150,7 +150,7 @@ const About: FC = () => {
                 />
                 <img
                   src={Images.table}
-                  className="rounded-3xl shadow-md object-cover"
+                  className="rounded-3xl shadow-md object-contain object-center  h-auto"
                   alt="Staff tablet managing orders"
                   loading="lazy"
                 />

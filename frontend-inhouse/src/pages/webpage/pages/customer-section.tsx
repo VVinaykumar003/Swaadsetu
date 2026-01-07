@@ -97,7 +97,7 @@ export function CustomerSection() {
                     className="flex items-start space-x-4 rounded-xl bg-[#181818] p-4 transition-colors hover:bg-[#222222]"
                   >
                     <div
-                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12"
                       style={{ background: feature.color }}
                     >
                       <feature.icon size={22} className="text-black" />
@@ -115,7 +115,6 @@ export function CustomerSection() {
               </div>
             </div>
 
-            {/* RIGHT: hero + thumbs */}
             {/* RIGHT: hero + thumbs */}
             <div className="flex-1 lg:flex lg:items-center lg:justify-end lg:gap-6">
               {/* BIG PHONE MOCKUP USING COMPONENT */}

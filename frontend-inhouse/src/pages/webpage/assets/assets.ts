@@ -48,6 +48,7 @@ import AdminImage_3 from "../assets/admin-3.jpeg"
 import StaffImage_1 from "../assets/Staff_Image_1.png"
 import StaffImage_2 from "../assets/Staff_Image_2.png"
 import TableImage from "../assets/TableImage.png"
+import adminV from "./admin-5.jpeg"
 
 // Updated Images object:
 export const Images = {
@@ -68,7 +69,7 @@ export const Images = {
   custmHeading,userFront,placeOrder,Bill,orderStatus,custDetails,
 
   //
-  adminI,
+  adminI,adminV,
 
   // Features Page
   AdminImage_1,AdminImage_2,AdminImage_3,StaffImage_1,StaffImage_2,TableImage,
